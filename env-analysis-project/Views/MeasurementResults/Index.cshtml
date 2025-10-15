@@ -1,0 +1,83 @@
+﻿@model IEnumerable<env_analysis_project.Models.MeasurementResult>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.EmissionSource)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Parameter)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.MeasurementDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Value)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Unit)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.EntryDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Remark)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.IsApproved)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ApprovedAt)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.EmissionSource.SourceCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Parameter.ParameterCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MeasurementDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Value)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Unit)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.EntryDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Remark)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IsApproved)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ApprovedAt)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.ResultID">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.ResultID">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.ResultID">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
