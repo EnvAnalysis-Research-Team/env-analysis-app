@@ -1,67 +1,115 @@
-﻿@{
+﻿@model IEnumerable<env_analysis_project.Models.EmissionSource>
+
+@{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Source Management";
 }
 
-<div class="max-w-8xl mx-auto bg-white shadow-sm rounded-md p-6 space-y-6">
+<div class="max-w-8xl mx-auto bg-white shadow-sm rounded-md p-6 space-y-6" x-data="{ addTypeModal: false }">
     <!-- HEADER -->
-    @* <div class="flex flex-col md:flex-row justify-end md:items-center mb-4">
-        <button class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-md transition">
-            + Add New Source
+    <div class="flex flex-col md:flex-row justify-end md:items-center mb-4 gap-2">
+        <!-- Nút mở modal thêm Source Type -->
+        <button type="button"
+                @@click="addTypeModal = true"
+                class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-md transition">
+            + Add source type
         </button>
     </div>
- *@
+
     <!-- TOP SECTION: MAP + SOURCE TYPE -->
-    <div class="grid grid-cols-8 gap-4">
+    <div class="grid grid-cols-8 gap-4" style="margin-top: 0 !important">
         <!-- Map Widget -->
-        <div class="col-span-8 md:col-span-7 bg-gray-100 border border-gray-200 rounded-lg p-4">
+        <div class="col-span-8 md:col-span-6 bg-gray-100 border border-gray-200 rounded-lg p-4">
             <h2 class="text-sm font-semibold text-gray-700 mb-2">Map</h2>
             <div class="w-full h-80 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-                <!-- Map placeholder -->
                 <span class="text-sm">[ Map will render here ]</span>
             </div>
         </div>
 
-        <!-- Source Type Box -->
-        <div class="col-span-8 md:col-span-1 bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col justify-between">
-            <h2 class="text-sm font-semibold text-gray-700 mb-3">Source Type</h2>
-
-            <div class="space-y-2 text-xs text-gray-600">
-                <div class="flex justify-between">
-                    <span>Industrial</span>
-                    <span class="font-medium text-gray-800">12</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Transportation</span>
-                    <span class="font-medium text-gray-800">8</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Residential</span>
-                    <span class="font-medium text-gray-800">5</span>
-                </div>
+        <!-- Source Type Box (wider + table) -->
+        <div class="col-span-8 md:col-span-2 bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-gray-700">Source Type</h2>
             </div>
 
-            <button class="mt-4 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1.5 rounded-md transition">
-                View Details
-            </button>
+            <div class="overflow-auto" style="max-height:380px;">
+                <table id="sourceTypeTable" class="w-full text-xs text-left table-auto">
+                    <thead class="bg-gray-100 text-gray-700 sticky top-0">
+                        <tr>
+                            <th class="px-2 py-2">Type</th>
+                            <th class="px-2 py-2 text-center">Number</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sourceTypeTbody">
+                        @* Server-side fallback rendering (kept minimal) *@
+                        @foreach (var type in ViewBag.SourceTypes ?? new List<dynamic>())
+                        {
+                            var id = type.SourceTypeID;
+                            var name = type.SourceTypeName;
+                            var count = type.Count;
+
+                            <tr class="type-row hover:bg-white cursor-pointer" data-id="@id"
+                                data-name="@name" data-count="@count">
+                                <td class="px-2 py-2 truncate" title="@name">@name</td>
+                                <td class="px-2 py-2 text-center font-medium">@count</td>
+                            </tr>
+                        }
+
+                        @if ((ViewBag.SourceTypes == null) || (((IEnumerable<dynamic>)ViewBag.SourceTypes).Any() == false))
+                        {
+                            <tr id="noSourceTypesRow">
+                                <td colspan="2" class="px-2 py-3 text-center text-xs text-gray-400">No source types found.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-    <!-- EMISSION SOURCE TABLE -->
+
+    <!-- EMISSION SOURCE TABLE (unchanged) -->
     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <div class="flex justify-between items-center mb-3">
             <h2 class="text-sm font-semibold text-gray-700">Emission Sources</h2>
-            <div class="flex space-x-2">
-                <input type="text"
+            <form asp-action="Index" method="get" class="flex space-x-2">
+                <input type="text" name="search"
                        placeholder="Search source..."
+                       value="@ViewData["CurrentFilter"]"
                        class="text-xs border border-gray-300 rounded-md px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
-                <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs px-3 py-1.5 rounded-md transition">
-                    <i class="bi bi-arrow-clockwise text-sm"></i>
-                </button>
-            </div>
-        </div>
 
+                <button type="submit"
+                        class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    <i class="bi bi-search text-[9px]"></i>
+                    Search
+                </button>
+
+                <a asp-action="Create" asp-controller="EmissionSource"
+                   class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    <i class="bi bi-person-plus text-[9px]"></i>
+                    Add
+                </a>
+
+                <a asp-action="ExportExcel" asp-controller="EmissionSource"
+                   class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    <i class="bi bi-file-earmark-excel text-[9px]"></i>
+                    Export
+                </a>
+
+                <a asp-action="Index" asp-controller="EmissionSource"
+                   class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    <i class="bi bi-arrow-clockwise text-[9px]"></i>
+                    Refresh
+                </a>
+
+                <button type="reset"
+                        class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-black text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    <i class="bi bi-sliders text-[9px]"></i>
+                    Reset
+                </button>
+            </form>
+        </div>
         <table class="w-full text-xs text-left border-t border-gray-200">
-            <thead class="bg-gray-100 text-gray-700 uppercase">
+            <thead class="bg-gray-100 text-gray-700">
                 <tr>
                     <th class="px-3 py-2">Source Name</th>
                     <th class="px-3 py-2">Source Code</th>
@@ -96,15 +144,16 @@
                                 }
                             </td>
                             <td class="px-3 py-2 text-center space-x-2">
-                                <a asp-action="Edit" asp-route-id="@src.EmissionSourceID"
+                                <a asp-controller="EmissionSource" asp-action="Edit" asp-route-id="@src.EmissionSourceID"
                                    class="text-blue-600 hover:text-blue-800" title="Edit">
                                     <i class="bi bi-pencil-square text-sm"></i>
                                 </a>
-                                <a asp-action="Details" asp-route-id="@src.EmissionSourceID"
+                                <a asp-controller="EmissionSource" asp-action="Details" asp-route-id="@src.EmissionSourceID"
                                    class="text-gray-600 hover:text-gray-800" title="Details">
                                     <i class="bi bi-eye text-sm"></i>
                                 </a>
-                                <form asp-action="Delete" method="post" class="inline">
+                                <form asp-controller="EmissionSource" asp-action="Delete" method="post" class="inline"
+                                      onsubmit="return confirm('Are you sure you want to delete this source?');">
                                     <input type="hidden" name="id" value="@src.EmissionSourceID" />
                                     <button type="submit" class="text-red-600 hover:text-red-800" title="Delete">
                                         <i class="bi bi-trash text-sm"></i>
@@ -126,4 +175,316 @@
         </table>
     </div>
 
+    <!-- MODAL: Add Source Type -->
+    <div x-show="addTypeModal"
+         class="fixed inset-0 bg-black bg-opacity-40 flex pt-16 justify-center z-50"
+         style="margin:0 !important"
+         x-transition.opacity>
+        <div @@click.away="addTypeModal = false"
+             class="bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-4 h-fit"
+             x-transition.scale>
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                <h2 class="text-sm font-semibold text-gray-700">Add Source Type</h2>
+                <button @@click="addTypeModal = false" class="text-gray-500 hover:text-gray-700">
+                    <i class="bi bi-x-lg text-xs"></i>
+                </button>
+            </div>
+
+            <form id="addTypeForm" asp-controller="SourceTypes" asp-action="Create" method="post" class="space-y-3 text-xs">
+                @Html.AntiForgeryToken()
+
+                <div>
+                    <label class="block font-medium text-gray-600 mb-1">Source Type Name</label>
+                    <input type="text" name="SourceTypeName" required
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-600 mb-1">Description</label>
+                    <textarea name="Description" rows="3"
+                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" name="IsActive" id="IsActive"
+                           class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    <label for="IsActive" class="text-gray-700">Active</label>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button"
+                            @@click="addTypeModal = false"
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Edit Source Type (JS-controlled) -->
+    <div id="editTypeModal" style="display: none; margin-top: 0 !important;"
+         class="fixed inset-0 bg-black bg-opacity-40 flex pt-16 justify-center z-50">
+        <div class="bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-4 h-fit">
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                <h2 class="text-sm font-semibold text-gray-700">View / Edit Source Type</h2>
+                <button id="closeEditModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="bi bi-x-lg text-xs"></i>
+                </button>
+            </div>
+
+            <form id="editTypeForm" method="post" class="space-y-3 text-xs">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="SourceTypeID" id="edit_SourceTypeID" />
+
+                <div>
+                    <label class="block font-medium text-gray-600 mb-1">Source Type Name</label>
+                    <input type="text" name="SourceTypeName" id="edit_SourceTypeName" required
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-600 mb-1">Description</label>
+                    <textarea name="Description" id="edit_Description" rows="3"
+                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" name="IsActive" id="edit_IsActive"
+                           class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    <label for="edit_IsActive" class="text-gray-700">Active</label>
+                </div>
+
+                <div class="flex justify-between items-center pt-2">
+                    <div class="space-x-2">
+                        <button id="deleteTypeBtn" type="button" class="text-xs text-red-600 hover:text-red-800">
+                            Delete
+                        </button>
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <button type="button" id="cancelEditBtn"
+                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                            Save changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+<script>
+    (function () {
+        // helper: safe text -> avoid HTML injection when inserting server data
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Load source type list from server and render into the small table.
+        async function loadSourceTypes() {
+            try {
+                const res = await fetch('/SourceTypes/GetList', { credentials: 'same-origin' });
+                if (!res.ok) throw new Error('Failed to fetch list: ' + res.status);
+                const list = await res.json();
+
+                const tbody = document.getElementById('sourceTypeTbody');
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+
+                if (!Array.isArray(list) || list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2" class="px-2 py-3 text-center text-xs text-gray-400">No source types found.</td></tr>';
+                    return;
+                }
+
+                list.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'type-row hover:bg-white cursor-pointer';
+                    tr.dataset.id = item.sourceTypeID ?? item.SourceTypeID ?? item.SourceTypeId;
+                    tr.dataset.name = item.sourceTypeName ?? item.SourceTypeName;
+                    tr.dataset.desc = item.description ?? item.Description;
+                    tr.dataset.isactive = item.isActive ?? item.IsActive;
+                    tr.dataset.count = item.count ?? item.Count ?? 0;
+
+                    tr.innerHTML = '<td class="px-2 py-2 truncate" title="' + escapeHtml(tr.dataset.name) + '">' + escapeHtml(tr.dataset.name) + '</td>'
+                                 + '<td class="px-2 py-2 text-center font-medium">' + escapeHtml(tr.dataset.count) + '</td>';
+
+                    tr.addEventListener('click', onSourceTypeRowClick);
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Click handler: fetch details for selected source type and open modal
+        async function onSourceTypeRowClick(ev) {
+            // ignore clicks on form controls (none present in row now)
+            const tr = ev.currentTarget;
+            const id = tr.dataset.id;
+            if (!id) return;
+
+            try {
+                const res = await fetch('/SourceTypes/Get/' + encodeURIComponent(id), { credentials: 'same-origin' });
+                if (!res.ok) {
+                    alert('Failed to load details (status ' + res.status + ').');
+                    return;
+                }
+                const json = await res.json();
+
+                // populate modal
+                document.getElementById('edit_SourceTypeID').value = json.sourceTypeID ?? json.SourceTypeID;
+                document.getElementById('edit_SourceTypeName').value = json.sourceTypeName ?? json.SourceTypeName ?? '';
+                document.getElementById('edit_Description').value = json.description ?? json.Description ?? '';
+                document.getElementById('edit_IsActive').checked = !!(json.isActive ?? json.IsActive);
+
+                // show modal
+                document.getElementById('editTypeModal').style.display = 'flex';
+            } catch (err) {
+                console.error(err);
+                alert('Error loading source type details. See console.');
+            }
+        }
+
+        // ADD form submit (unchanged behavior)
+        const addForm = document.getElementById('addTypeForm');
+        if (addForm) {
+            addForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(addForm);
+
+                try {
+                    const res = await fetch(addForm.action, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    let json = {};
+                    try { json = await res.json(); } catch { json = {}; }
+
+                    if (!res.ok || !json.success) {
+                        if (json?.errors && Array.isArray(json.errors) && json.errors.length) {
+                            alert(json.errors.join(' • '));
+                        } else {
+                            alert(json?.error || 'Failed to create source type. Check request.');
+                        }
+                        return;
+                    }
+
+                    alert(`Created "${json.name || 'Source type'}" successfully.`);
+                    setTimeout(() => location.reload(), 700);
+                } catch (err) {
+                    console.error(err);
+                    alert('Error saving source type. Check request or server logs.');
+                }
+            });
+        }
+
+        // Edit modal controls
+        const editForm = document.getElementById('editTypeForm');
+        const closeEdit = document.getElementById('closeEditModal');
+        const cancelEdit = document.getElementById('cancelEditBtn');
+        const deleteBtn = document.getElementById('deleteTypeBtn');
+
+        if (closeEdit) closeEdit.addEventListener('click', () => document.getElementById('editTypeModal').style.display = 'none');
+        if (cancelEdit) cancelEdit.addEventListener('click', () => document.getElementById('editTypeModal').style.display = 'none');
+
+        if (editForm) {
+            editForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('edit_SourceTypeID').value;
+                if (!id) return alert('Missing type id.');
+
+                const tokenInput = editForm.querySelector('input[name="__RequestVerificationToken"]');
+                const fd = new FormData(editForm);
+                if (tokenInput) fd.append('__RequestVerificationToken', tokenInput.value);
+                fd.append('UpdatedAt', new Date().toISOString());
+
+                try {
+                    const res = await fetch('/SourceTypes/Edit/' + encodeURIComponent(id), {
+                        method: 'POST',
+                        body: fd,
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!res.ok) {
+                        alert('Failed to update source type. Server responded with status ' + res.status);
+                        return;
+                    }
+
+                    let json = {};
+                    try { json = await res.json(); } catch { json = {}; }
+
+                    if (json?.success) {
+                        alert('Updated successfully.');
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        // fallback: reload to pick up non-JSON redirect responses
+                        setTimeout(() => location.reload(), 200);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Error updating source type. See console.');
+                }
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to delete this source type?')) return;
+                const id = document.getElementById('edit_SourceTypeID').value;
+                if (!id) return alert('Missing id.');
+
+                const tokenInput = editForm.querySelector('input[name="__RequestVerificationToken"]');
+                const fd = new FormData();
+                fd.append('id', id);
+                if (tokenInput) fd.append('__RequestVerificationToken', tokenInput.value);
+
+                try {
+                    const res = await fetch('/SourceTypes/Delete/' + encodeURIComponent(id), {
+                        method: 'POST',
+                        body: fd,
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (res.ok) {
+                        try {
+                            const json = await res.json();
+                            if (json?.success === false) {
+                                alert(json?.error || 'Delete failed.');
+                                return;
+                            }
+                        } catch { /* ignore */ }
+
+                        alert('Deleted successfully.');
+                        setTimeout(() => location.reload(), 400);
+                    } else {
+                        alert('Delete failed. Server responded with ' + res.status);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Error deleting. See console.');
+                }
+            });
+        }
+
+        // initial load
+        document.addEventListener('DOMContentLoaded', loadSourceTypes);
+    })();
+</script>
+
+<partial name="_ValidationScriptsPartial" />
