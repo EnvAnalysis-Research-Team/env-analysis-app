@@ -5,12 +5,12 @@
     ViewData["Title"] = "Source Management";
 }
 
-<div class="max-w-8xl mx-auto bg-white shadow-sm rounded-md p-6 space-y-6" x-data="{ addTypeModal: false }">
+<div class="max-w-8xl mx-auto bg-white shadow-sm rounded-md p-6 space-y-6">
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row justify-end md:items-center mb-4 gap-2">
         <!-- Nút mở modal thêm Source Type -->
         <button type="button"
-                @@click="addTypeModal = true"
+                id="openAddTypeModalBtn"
                 class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-md transition">
             + Add source type
         </button>
@@ -33,36 +33,37 @@
             </div>
 
             <div class="overflow-auto" style="max-height:380px;">
-                <table id="sourceTypeTable" class="w-full text-xs text-left table-auto">
-                    <thead class="bg-gray-100 text-gray-700 sticky top-0">
-                        <tr>
-                            <th class="px-2 py-2">Type</th>
-                            <th class="px-2 py-2 text-center">Number</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sourceTypeTbody">
-                        @* Server-side fallback rendering (kept minimal) *@
-                        @foreach (var type in ViewBag.SourceTypes ?? new List<dynamic>())
-                        {
-                            var id = type.SourceTypeID;
-                            var name = type.SourceTypeName;
-                            var count = type.Count;
-
-                            <tr class="type-row hover:bg-white cursor-pointer" data-id="@id"
-                                data-name="@name" data-count="@count">
-                                <td class="px-2 py-2 truncate" title="@name">@name</td>
-                                <td class="px-2 py-2 text-center font-medium">@count</td>
+                <div class="overflow-auto" style="max-height: 320px; overflow-x:auto;">
+                    <table id="sourceTypeTable" class="w-full text-xs text-left table-auto">
+                        <thead class="bg-gray-100 text-gray-700 sticky top-0">
+                            <tr>
+                                <th class="px-2 py-2">Type</th>
+                                <th class="px-2 py-2 text-center">Number</th>
                             </tr>
-                        }
+                        </thead>
+                        <tbody id="sourceTypeTbody">
+                            @foreach (var type in ViewBag.SourceTypes ?? new List<dynamic>())
+                            {
+                                var id = type.SourceTypeID;
+                                var name = type.SourceTypeName;
+                                var count = type.Count;
 
-                        @if ((ViewBag.SourceTypes == null) || (((IEnumerable<dynamic>)ViewBag.SourceTypes).Any() == false))
-                        {
-                            <tr id="noSourceTypesRow">
-                                <td colspan="2" class="px-2 py-3 text-center text-xs text-gray-400">No source types found.</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                                <tr class="type-row hover:bg-white cursor-pointer" data-id="@id"
+                                    data-name="@name" data-count="@count">
+                                    <td class="px-2 py-2 truncate" title="@name">@name</td>
+                                    <td class="px-2 py-2 text-center font-medium">@count</td>
+                                </tr>
+                            }
+
+                            @if ((ViewBag.SourceTypes == null) || (((IEnumerable<dynamic>)ViewBag.SourceTypes).Any() == false))
+                            {
+                                <tr id="noSourceTypesRow">
+                                    <td colspan="2" class="px-2 py-3 text-center text-xs text-gray-400">No source types found.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -146,21 +147,22 @@
                                 }
                             </td>
                             <td class="px-3 py-2 text-center space-x-2">
-                                <a asp-controller="EmissionSource" asp-action="Edit" asp-route-id="@src.EmissionSourceID"
-                                   class="text-blue-600 hover:text-blue-800" title="Edit">
-                                    <i class="bi bi-pencil-square text-sm"></i>
-                                </a>
-                                <a asp-controller="EmissionSource" asp-action="Details" asp-route-id="@src.EmissionSourceID"
-                                   class="text-gray-600 hover:text-gray-800" title="Details">
-                                    <i class="bi bi-eye text-sm"></i>
-                                </a>
-                                <form asp-controller="EmissionSource" asp-action="Delete" method="post" class="inline"
-                                      onsubmit="return confirm('Are you sure you want to delete this source?');">
-                                    <input type="hidden" name="id" value="@src.EmissionSourceID" />
-                                    <button type="submit" class="text-red-600 hover:text-red-800" title="Delete">
-                                        <i class="bi bi-trash text-sm"></i>
+                                <div class="flex items-center justify-center gap-2">
+                                    <button type="button"
+                                            class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition"
+                                            title="View Details"
+                                            data-id="@src.EmissionSourceID">
+                                        <i class="bi bi-eye text-[10px]"></i>
                                     </button>
-                                </form>
+                                    <form asp-action="Delete" method="post" class="inline">
+                                        <button type="submit"
+                                                class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition"
+                                                title="Delete User"
+                                                data-id="@src.EmissionSourceID">
+                                            <i class="bi bi-trash text-[10px]"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }
@@ -177,17 +179,13 @@
         </table>
     </div>
 
-    <!-- MODAL: Add Source Type -->
-    <div x-show="addTypeModal"
-         class="fixed inset-0 bg-black bg-opacity-40 flex pt-16 justify-center z-50"
-         style="margin:0 !important"
-         x-transition.opacity>
-        <div @@click.away="addTypeModal = false"
-             class="bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-4 h-fit"
-             x-transition.scale>
+    <!-- MODAL: Add Source Type (now vanilla JS controlled, like others) -->
+    <div id="addTypeModal" style="display: none; margin-top: 0 !important;"
+         class="fixed inset-0 bg-black bg-opacity-40 flex pt-16 justify-center z-50">
+        <div class="bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-4 h-fit">
             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
                 <h2 class="text-sm font-semibold text-gray-700">Add Source Type</h2>
-                <button @@click="addTypeModal = false" class="text-gray-500 hover:text-gray-700">
+                <button id="closeAddTypeModal" class="text-gray-500 hover:text-gray-700">
                     <i class="bi bi-x-lg text-xs"></i>
                 </button>
             </div>
@@ -212,7 +210,7 @@
                 </div>
                 <div class="flex justify-end space-x-2 pt-2">
                     <button type="button"
-                            @@click="addTypeModal = false"
+                            id="cancelAddTypeBtn"
                             class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                         Cancel
                     </button>
@@ -277,6 +275,7 @@
             </form>
         </div>
     </div>
+
     <!-- MODAL: Add Emission Source -->
     <div id="addSourceModal" style="display: none; margin-top: 0 !important;"
          class="fixed inset-0 bg-black bg-opacity-40 flex pt-16 justify-center z-50">
@@ -290,7 +289,7 @@
             </div>
 
             <!-- FORM -->
-            <form id="addSourceForm" method="post" class="space-y-3 text-xs">
+            <form id="addSourceForm" asp-controller="EmissionSource" asp-action="Create" method="post" class="space-y-3 text-xs">
                 @Html.AntiForgeryToken()
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -329,7 +328,7 @@
                         <select name="SourceTypeID" id="add_SourceTypeID" required
                                 class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                             <option value="">-- Select Type --</option>
-                            @foreach (var type in ViewBag.SourceTypes)
+                            @foreach (var type in ViewBag.SourceTypes ?? new List<dynamic>())
                             {
                                 <option value="@type.SourceTypeID">@type.SourceTypeName</option>
                             }
@@ -363,59 +362,55 @@
             </form>
         </div>
     </div>
-    <!-- MODAL: Add Emission Source -->
-    <div id="addSourceModal" style="display: none; margin-top: 0 !important;"
+    <!-- MODAL: View / Edit Emission Source -->
+    <div id="editSourceModal" style="display: none; margin-top: 0 !important;"
          class="fixed inset-0 bg-black bg-opacity-40 flex pt-16 justify-center z-50">
         <div class="bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-4 h-fit">
             <!-- HEADER -->
             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-                <h2 class="text-sm font-semibold text-gray-700">Add New Emission Source</h2>
-                <button id="closeAddModal" class="text-gray-500 hover:text-gray-700">
+                <h2 class="text-sm font-semibold text-gray-700">View / Edit Emission Source</h2>
+                <button id="closeEditSourceModal" class="text-gray-500 hover:text-gray-700">
                     <i class="bi bi-x-lg text-xs"></i>
                 </button>
             </div>
 
             <!-- FORM -->
-            <form id="addSourceForm" method="post" class="space-y-3 text-xs">
+            <form id="editSourceForm" method="post" class="space-y-3 text-xs">
                 @Html.AntiForgeryToken()
+                <input type="hidden" name="SourceID" id="edit_SourceID" />
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Source Code</label>
-                        <input type="text" name="SourceCode" id="add_SourceCode" required
+                        <input type="text" name="SourceCode" id="edit_SourceCode"
                                class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
-
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Source Name</label>
-                        <input type="text" name="SourceName" id="add_SourceName" required
+                        <input type="text" name="SourceName" id="edit_SourceName"
                                class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
-
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Latitude</label>
-                        <input type="number" step="any" name="Latitude" id="add_Latitude"
+                        <input type="number" step="any" name="Latitude" id="edit_Latitude"
                                class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
-
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Longitude</label>
-                        <input type="number" step="any" name="Longitude" id="add_Longitude"
+                        <input type="number" step="any" name="Longitude" id="edit_Longitude"
                                class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
-
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Location</label>
-                        <input type="text" name="Location" id="add_Location"
+                        <input type="text" name="Location" id="edit_Location"
                                class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
-
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Source Type</label>
-                        <select name="SourceTypeID" id="add_SourceTypeID" required
+                        <select name="SourceTypeID" id="emission_sources_stid"
                                 class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                             <option value="">-- Select Type --</option>
-                            @foreach (var type in ViewBag.SourceTypes)
+                            @foreach (var type in ViewBag.SourceTypes ?? new List<dynamic>())
                             {
                                 <option value="@type.SourceTypeID">@type.SourceTypeName</option>
                             }
@@ -425,26 +420,31 @@
 
                 <div>
                     <label class="block font-medium text-gray-600 mb-1">Description</label>
-                    <textarea name="Description" id="add_Description" rows="3"
+                    <textarea name="Description" id="emission_sources_des" rows="3"
                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
 
                 <div class="flex items-center space-x-2">
-                    <input type="checkbox" name="IsActive" id="add_IsActive"
+                    <input type="checkbox" name="IsActive" id="edit_IsActiveSource"
                            class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                    <label for="add_IsActive" class="text-gray-700">Active</label>
+                    <label for="edit_IsActiveSource" class="text-gray-700">Active</label>
                 </div>
 
-                <!-- BUTTONS -->
-                <div class="flex justify-end items-center pt-2 space-x-2">
-                    <button type="button" id="cancelAddBtn"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
-                        Cancel
+                <div class="flex justify-between items-center pt-2">
+                    <button type="button" id="deleteSourceBtn"
+                            class="text-xs text-red-600 hover:text-red-800">
+                        Delete
                     </button>
-                    <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
-                        Save Source
-                    </button>
+                    <div class="space-x-2">
+                        <button type="button" id="cancelEditSourceBtn"
+                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                            Save changes
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -655,7 +655,41 @@
                 }
             });
         }
-            // --- EMISSION SOURCE MODAL CONTROL ---
+
+        // --- ADD SOURCE TYPE MODAL CONTROL  ---
+        const addTypeModal = document.getElementById('addTypeModal');
+        const openAddTypeBtn = document.getElementById('openAddTypeModalBtn');
+        const closeAddTypeBtn = document.getElementById('closeAddTypeModal');
+        const cancelAddTypeBtn = document.getElementById('cancelAddTypeBtn');
+
+        if (openAddTypeBtn && addTypeModal) {
+            openAddTypeBtn.addEventListener('click', () => {
+                addTypeModal.style.display = 'flex';
+            });
+        }
+
+        if (closeAddTypeBtn) {
+            closeAddTypeBtn.addEventListener('click', () => {
+                addTypeModal.style.display = 'none';
+            });
+        }
+
+        if (cancelAddTypeBtn) {
+            cancelAddTypeBtn.addEventListener('click', () => {
+                addTypeModal.style.display = 'none';
+            });
+        }
+
+        // Đóng modal khi click ra ngoài phần form
+        if (addTypeModal) {
+            addTypeModal.addEventListener('click', (e) => {
+                if (e.target === addTypeModal) {
+                    addTypeModal.style.display = 'none';
+                }
+            });
+        }
+
+        // --- EMISSION SOURCE MODAL CONTROL ---
         const addSourceModal = document.getElementById('addSourceModal');
         const openAddSourceBtn = document.getElementById('openAddSourceModalBtn');
         const closeAddSourceBtn = document.getElementById('closeAddModal');
@@ -684,6 +718,122 @@
             addSourceModal.addEventListener('click', (e) => {
                 if (e.target === addSourceModal) {
                     addSourceModal.style.display = 'none';
+                }
+            });
+        }
+                // --- EMISSION SOURCE DETAIL MODAL ---
+        const editSourceModal = document.getElementById('editSourceModal');
+        const closeEditSourceBtn = document.getElementById('closeEditSourceModal');
+        const cancelEditSourceBtn = document.getElementById('cancelEditSourceBtn');
+        const deleteSourceBtn = document.getElementById('deleteSourceBtn');
+        const editSourceForm = document.getElementById('editSourceForm');
+
+        // mở modal khi click icon mắt
+        document.querySelectorAll('button[title="View Details"]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const row = e.target.closest('tr');
+                const button = e.target.closest('button');
+                const code = button.getAttribute('data-id');
+
+                try {
+                    function decodeUnicode(str) {
+                        try {
+                            return JSON.parse('"' + str.replace(/\"/g, '\\"') + '"');
+                        } catch (e) {
+                            return str;
+                        }
+                    }
+                    const res = await fetch(`/EmissionSources/Detail/${encodeURIComponent(code)}`, { credentials: 'same-origin' });
+                    if (!res.ok) throw new Error('Failed to load source detail');
+                    const data = await res.json();
+
+                        document.getElementById('edit_SourceCode').value = data.sourceCode ?? data.SourceCode ?? '';
+                        document.getElementById('edit_SourceName').value = data.sourceName ?? data.SourceName ?? '';
+                        document.getElementById('edit_Latitude').value = data.latitude ?? data.Latitude ?? '';
+                        document.getElementById('edit_Longitude').value = data.longitude ?? data.Longitude ?? '';
+                        document.getElementById('edit_Location').value = data.location ?? data.Location ?? '';
+                        document.getElementById('edit_SourceTypeID').value = data.sourceTypeID ?? data.SourceTypeID ?? '';
+                        document.getElementById('edit_IsActiveSource').checked = !!(data.isActive ?? data.IsActive);
+                        document.getElementById('emission_sources_des').value = data.description ?? data.Description ?? '';
+
+
+                    const sel = document.getElementById('emission_sources_stid');
+                    if (sel && data.sourceTypeID)
+                        sel.value = data.sourceTypeID ?? data.SourceTypeID;
+
+                    editSourceModal.style.display = 'flex';
+                } catch (err) {
+                    console.error(err);
+                    alert('Error loading emission source details.');
+                }
+            });
+        });
+
+        // đóng modal
+        if (closeEditSourceBtn) closeEditSourceBtn.addEventListener('click', () => editSourceModal.style.display = 'none');
+        if (cancelEditSourceBtn) cancelEditSourceBtn.addEventListener('click', () => editSourceModal.style.display = 'none');
+        if (editSourceModal) {
+            editSourceModal.addEventListener('click', e => {
+                if (e.target === editSourceModal) editSourceModal.style.display = 'none';
+            });
+        }
+
+        // submit cập nhật
+        if (editSourceForm) {
+            editSourceForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('edit_SourceID').value;
+                if (!id) return alert('Missing SourceID.');
+
+                const fd = new FormData(editSourceForm);
+                try {
+                    const res = await fetch(`/EmissionSources/Edit/${encodeURIComponent(id)}`, {
+                        method: 'POST',
+                        body: fd,
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    const json = await res.json().catch(() => ({}));
+                    if (res.ok && json.success) {
+                        alert('Updated successfully.');
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        alert(json.error || 'Failed to update.');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Error updating emission source.');
+                }
+            });
+        }
+
+        // xoá emission source
+        if (deleteSourceBtn) {
+            deleteSourceBtn.addEventListener('click', async () => {
+                if (!confirm('Delete this emission source?')) return;
+                const id = document.getElementById('edit_SourceID').value;
+                const fd = new FormData();
+                fd.append('id', id);
+
+                try {
+                    const res = await fetch(`/EmissionSources/Delete/${encodeURIComponent(id)}`, {
+                        method: 'POST',
+                        body: fd,
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (res.ok) {
+                        alert('Deleted successfully.');
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        alert('Delete failed. Status ' + res.status);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Error deleting emission source.');
                 }
             });
         }

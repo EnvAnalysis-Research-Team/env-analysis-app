@@ -19,143 +19,126 @@ namespace env_analysis_project.Controllers
             _context = context;
         }
 
-        // GET: EmissionSources
+        // =============================
+        // LIST VIEW
+        // =============================
         public async Task<IActionResult> Index()
         {
-            var env_analysis_projectContext = _context.EmissionSource.Include(e => e.SourceType);
-            return View(await env_analysis_projectContext.ToListAsync());
-        }
-
-        // GET: EmissionSources/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var emissionSource = await _context.EmissionSource
+            var emissionSources = _context.EmissionSource
                 .Include(e => e.SourceType)
-                .FirstOrDefaultAsync(m => m.EmissionSourceID == id);
-            if (emissionSource == null)
-            {
-                return NotFound();
-            }
+                .OrderBy(e => e.SourceName);
 
-            return View(emissionSource);
+            ViewBag.SourceTypes = await _context.SourceType
+                .OrderBy(t => t.SourceTypeName)
+                .ToListAsync();
+
+            return View(await emissionSources.ToListAsync());
         }
 
-        // GET: EmissionSources/Create
-        public IActionResult Create()
+        // =============================
+        // GET DETAIL (AJAX)
+        // =============================
+        [HttpGet]
+        public async Task<IActionResult> Detail(int id)
         {
-            ViewData["SourceTypeID"] = new SelectList(_context.Set<SourceType>(), "SourceTypeID", "SourceTypeName");
-            return View();
+            var source = await _context.EmissionSource
+                .Include(e => e.SourceType)
+                .FirstOrDefaultAsync(e => e.EmissionSourceID == id);
+
+            if (source == null)
+                return NotFound();
+
+            // Dựng DTO trả về cho JS
+            var result = new
+            {
+                source.EmissionSourceID,
+                source.SourceCode,
+                source.SourceName,
+                source.Description,
+                source.Location,
+                source.Latitude,
+                source.Longitude,
+                source.IsActive,
+                source.CreatedAt,
+                source.UpdatedAt,
+                source.SourceTypeID,
+                SourceTypeName = source.SourceType?.SourceTypeName
+            };
+
+            return Json(result);
         }
 
-        // POST: EmissionSources/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+
+        // =============================
+        // CREATE (FORM)
+        // =============================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("EmissionSourceID,SourceCode,SourceName,SourceTypeID,Location,Latitude,Longitude,Description,IsActive,CreatedAt,UpdatedAt")] EmissionSource emissionSource)
+        public async Task<IActionResult> Create([Bind("SourceCode,SourceName,SourceTypeID,Location,Latitude,Longitude,Description,IsActive")] EmissionSource emissionSource)
         {
-            if (ModelState.IsValid)
-            {
-                _context.Add(emissionSource);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["SourceTypeID"] = new SelectList(_context.Set<SourceType>(), "SourceTypeID", "SourceTypeName", emissionSource.SourceTypeID);
-            return View(emissionSource);
+            if (!ModelState.IsValid)
+                return BadRequest(new { error = "Invalid data" });
+
+            emissionSource.CreatedAt = DateTime.Now;
+            emissionSource.UpdatedAt = DateTime.Now;
+
+            _context.EmissionSource.Add(emissionSource);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
         }
 
-        // GET: EmissionSources/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var emissionSource = await _context.EmissionSource.FindAsync(id);
-            if (emissionSource == null)
-            {
-                return NotFound();
-            }
-            ViewData["SourceTypeID"] = new SelectList(_context.Set<SourceType>(), "SourceTypeID", "SourceTypeName", emissionSource.SourceTypeID);
-            return View(emissionSource);
-        }
-
-        // POST: EmissionSources/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // =============================
+        // EDIT (AJAX)
+        // =============================
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("EmissionSourceID,SourceCode,SourceName,SourceTypeID,Location,Latitude,Longitude,Description,IsActive,CreatedAt,UpdatedAt")] EmissionSource emissionSource)
+        public async Task<IActionResult> Edit(int id, [FromForm] EmissionSource emissionSource)
         {
             if (id != emissionSource.EmissionSourceID)
-            {
-                return NotFound();
-            }
+                return BadRequest(new { error = "Mismatched ID" });
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(emissionSource);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!EmissionSourceExists(emissionSource.EmissionSourceID))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["SourceTypeID"] = new SelectList(_context.Set<SourceType>(), "SourceTypeID", "SourceTypeName", emissionSource.SourceTypeID);
-            return View(emissionSource);
-        }
+            var existing = await _context.EmissionSource.FindAsync(id);
+            if (existing == null)
+                return NotFound(new { error = "Emission Source not found" });
 
-        // GET: EmissionSources/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (!ModelState.IsValid)
+                return BadRequest(new { error = "Invalid data" });
 
-            var emissionSource = await _context.EmissionSource
-                .Include(e => e.SourceType)
-                .FirstOrDefaultAsync(m => m.EmissionSourceID == id);
-            if (emissionSource == null)
-            {
-                return NotFound();
-            }
-
-            return View(emissionSource);
-        }
-
-        // POST: EmissionSources/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var emissionSource = await _context.EmissionSource.FindAsync(id);
-            if (emissionSource != null)
-            {
-                _context.EmissionSource.Remove(emissionSource);
-            }
+            // Update fields manually (tránh overwrite CreatedAt)
+            existing.SourceCode = emissionSource.SourceCode;
+            existing.SourceName = emissionSource.SourceName;
+            existing.SourceTypeID = emissionSource.SourceTypeID;
+            existing.Location = emissionSource.Location;
+            existing.Latitude = emissionSource.Latitude;
+            existing.Longitude = emissionSource.Longitude;
+            existing.Description = emissionSource.Description;
+            existing.IsActive = emissionSource.IsActive;
+            existing.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            return Json(new { success = true });
         }
 
+        // =============================
+        // DELETE (AJAX)
+        // =============================
+        [HttpPost]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var emissionSource = await _context.EmissionSource.FindAsync(id);
+            if (emissionSource == null)
+                return NotFound(new { error = "Emission Source not found" });
+
+            _context.EmissionSource.Remove(emissionSource);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        // =============================
+        // HELPER
+        // =============================
         private bool EmissionSourceExists(int id)
         {
             return _context.EmissionSource.Any(e => e.EmissionSourceID == id);
