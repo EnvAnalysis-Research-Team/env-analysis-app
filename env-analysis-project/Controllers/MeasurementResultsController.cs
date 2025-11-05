@@ -19,6 +19,11 @@ namespace env_analysis_project.Controllers
             _context = context;
         }
 
+        public async Task<IActionResult> Manage()
+        {
+            return View("Manage");
+        }
+
         // GET: MeasurementResults
         public async Task<IActionResult> Index()
         {

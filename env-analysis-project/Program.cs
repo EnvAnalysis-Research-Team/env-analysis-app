@@ -63,7 +63,7 @@ app.UseAuthorization();
 // ======================================
 // Cấu hình Route
 // ======================================
-app.MapControllerRoute(
+app.MapControllerRoute( 
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}"
 );
@@ -72,9 +72,7 @@ app.MapControllerRoute(
     name: "account-management",
     pattern: "{controller=UserManagementController}/{action=Index}"
 );
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+
 
 // ======================================
 // Chạy ứng dụng

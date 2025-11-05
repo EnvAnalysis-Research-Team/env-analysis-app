@@ -1,0 +1,92 @@
+﻿@model IEnumerable<env_analysis_project.Models.MeasurementResult>
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Measurement Result";
+}
+
+<div class="max-w-7xl mx-auto rounded-md py-6 space-y-10">
+    <!-- Water Measurement Results -->
+    <div class="space-y-4 min-h-[40vh] bg-white p-4">
+        <h2 class="text-sm font-semibold text-blue-700">Water Measurement Results</h2>
+        <table class="w-full text-xs text-left border-t border-gray-200">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="px-3 py-2">Result ID</th>
+                    <th class="px-3 py-2">Parameter</th>
+                    <th class="px-3 py-2">Value</th>
+                    <th class="px-3 py-2">Unit</th>
+                    <th class="px-3 py-2">Measurement Date</th>
+                    <th class="px-3 py-2 text-center">Status</th>
+                    <th class="px-3 py-2">Approved At</th>
+                    <th class="px-3 py-2">Remark</th>
+                    <th class="px-3 py-2 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-3 py-2">ResultID</td>
+                    <td class="px-3 py-2">ParameterCode</td>
+                    <td class="px-3 py-2">Value</td>
+                    <td class="px-3 py-2">Unit</td>
+                    <td class="px-3 py-2">MeasurementDate</td>
+                    <td class="px-3 py-2 text-center">Approved/Pending</td>
+                    <td class="px-3 py-2">ApprovedAt</td>
+                    <td class="px-3 py-2 truncate max-w-[14rem]">Remark</td>
+                    <td class="px-3 py-2 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button type="button" class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition" title="View Details">
+                                <i class="bi bi-eye text-[10px]"></i>
+                            </button>
+                            <button type="button" class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition" title="Delete Measurement Result">
+                                <i class="bi bi-trash text-[10px]"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Air Measurement Results -->
+    <div class="space-y-4 min-h-[40vh] bg-white p-4">
+        <h2 class="text-sm font-semibold text-blue-700">Air Measurement Results</h2>
+        <table class="w-full text-xs text-left border-t border-gray-200">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="px-3 py-2">Result ID</th>
+                    <th class="px-3 py-2">Parameter</th>
+                    <th class="px-3 py-2">Value</th>
+                    <th class="px-3 py-2">Unit</th>
+                    <th class="px-3 py-2">Measurement Date</th>
+                    <th class="px-3 py-2 text-center">Status</th>
+                    <th class="px-3 py-2">Approved At</th>
+                    <th class="px-3 py-2">Remark</th>
+                    <th class="px-3 py-2 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-3 py-2">ResultID</td>
+                    <td class="px-3 py-2">ParameterCode</td>
+                    <td class="px-3 py-2">Value</td>
+                    <td class="px-3 py-2">Unit</td>
+                    <td class="px-3 py-2">MeasurementDate</td>
+                    <td class="px-3 py-2 text-center">Approved/Pending</td>
+                    <td class="px-3 py-2">ApprovedAt</td>
+                    <td class="px-3 py-2 truncate max-w-[14rem]">Remark</td>
+                    <td class="px-3 py-2 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button type="button" class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition" title="View Details">
+                                <i class="bi bi-eye text-[10px]"></i>
+                            </button>
+                            <button type="button" class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition" title="Delete Measurement Result">
+                                <i class="bi bi-trash text-[10px]"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
