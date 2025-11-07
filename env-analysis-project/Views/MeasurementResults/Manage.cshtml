@@ -1,92 +1,325 @@
-﻿@model IEnumerable<env_analysis_project.Models.MeasurementResult>
-
+@using System.Text.Json
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Measurement Result";
+
+    var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    var emissionSourcesJson = JsonSerializer.Serialize(ViewBag.EmissionSources ?? new List<object>(), jsonOptions);
+    var parametersJson = JsonSerializer.Serialize(ViewBag.Parameters ?? new List<object>(), jsonOptions);
 }
 
-<div class="max-w-7xl mx-auto rounded-md py-6 space-y-10">
-    <!-- Water Measurement Results -->
-    <div class="space-y-4 min-h-[40vh] bg-white p-4">
-        <h2 class="text-sm font-semibold text-blue-700">Water Measurement Results</h2>
-        <table class="w-full text-xs text-left border-t border-gray-200">
-            <thead class="bg-gray-100 text-gray-700">
-                <tr>
-                    <th class="px-3 py-2">Result ID</th>
-                    <th class="px-3 py-2">Parameter</th>
-                    <th class="px-3 py-2">Value</th>
-                    <th class="px-3 py-2">Unit</th>
-                    <th class="px-3 py-2">Measurement Date</th>
-                    <th class="px-3 py-2 text-center">Status</th>
-                    <th class="px-3 py-2">Approved At</th>
-                    <th class="px-3 py-2">Remark</th>
-                    <th class="px-3 py-2 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-3 py-2">ResultID</td>
-                    <td class="px-3 py-2">ParameterCode</td>
-                    <td class="px-3 py-2">Value</td>
-                    <td class="px-3 py-2">Unit</td>
-                    <td class="px-3 py-2">MeasurementDate</td>
-                    <td class="px-3 py-2 text-center">Approved/Pending</td>
-                    <td class="px-3 py-2">ApprovedAt</td>
-                    <td class="px-3 py-2 truncate max-w-[14rem]">Remark</td>
-                    <td class="px-3 py-2 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button type="button" class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition" title="View Details">
-                                <i class="bi bi-eye text-[10px]"></i>
-                            </button>
-                            <button type="button" class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition" title="Delete Measurement Result">
-                                <i class="bi bi-trash text-[10px]"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+<form id="measurementResultsAntiForgery" method="post" class="hidden">
+    @Html.AntiForgeryToken()
+</form>
+
+<div class="max-w-8xl mx-auto bg-white shadow-sm rounded-md p-6 space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+            <h1 class="text-lg font-semibold text-gray-800">Measurement Results</h1>
+            <p class="text-xs text-gray-500">Track, approve, and audit measurements across air and water sources.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button id="refreshResultsBtn"
+                    type="button"
+                    class="inline-flex items-center justify-center gap-2 border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-50 transition">
+                <i class="bi bi-arrow-repeat text-[11px]"></i>
+                Refresh
+            </button>
+            <button id="exportResultsBtn"
+                    type="button"
+                    class="inline-flex items-center justify-center gap-2 border border-blue-300 text-blue-600 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-blue-50 transition">
+                <i class="bi bi-download text-[11px]"></i>
+                Export
+            </button>
+            <button id="openAddResultBtn"
+                    type="button"
+                    class="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-blue-700 transition">
+                <i class="bi bi-plus-circle text-[11px]"></i>
+                Add Result
+            </button>
+        </div>
     </div>
 
-    <!-- Air Measurement Results -->
-    <div class="space-y-4 min-h-[40vh] bg-white p-4">
-        <h2 class="text-sm font-semibold text-blue-700">Air Measurement Results</h2>
-        <table class="w-full text-xs text-left border-t border-gray-200">
-            <thead class="bg-gray-100 text-gray-700">
-                <tr>
-                    <th class="px-3 py-2">Result ID</th>
-                    <th class="px-3 py-2">Parameter</th>
-                    <th class="px-3 py-2">Value</th>
-                    <th class="px-3 py-2">Unit</th>
-                    <th class="px-3 py-2">Measurement Date</th>
-                    <th class="px-3 py-2 text-center">Status</th>
-                    <th class="px-3 py-2">Approved At</th>
-                    <th class="px-3 py-2">Remark</th>
-                    <th class="px-3 py-2 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-3 py-2">ResultID</td>
-                    <td class="px-3 py-2">ParameterCode</td>
-                    <td class="px-3 py-2">Value</td>
-                    <td class="px-3 py-2">Unit</td>
-                    <td class="px-3 py-2">MeasurementDate</td>
-                    <td class="px-3 py-2 text-center">Approved/Pending</td>
-                    <td class="px-3 py-2">ApprovedAt</td>
-                    <td class="px-3 py-2 truncate max-w-[14rem]">Remark</td>
-                    <td class="px-3 py-2 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button type="button" class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition" title="View Details">
-                                <i class="bi bi-eye text-[10px]"></i>
-                            </button>
-                            <button type="button" class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition" title="Delete Measurement Result">
-                                <i class="bi bi-trash text-[10px]"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex gap-2 border-b border-gray-200 text-xs font-medium">
+                <button type="button"
+                        class="tab-button px-4 py-2 -mb-px border-b-2 border-blue-600 text-blue-600"
+                        data-tab="all">
+                    All
+                </button>
+                <button type="button"
+                        class="tab-button px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-blue-600"
+                        data-tab="water">
+                    Water
+                </button>
+                <button type="button"
+                        class="tab-button px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-blue-600"
+                        data-tab="air">
+                    Air
+                </button>
+            </div>
+            <div class="flex items-center gap-4 text-[11px] text-gray-500">
+                <span id="waterCountBadge">0 results</span>
+                <span id="airCountBadge">0 results</span>
+            </div>
+        </div>
+
+        <div id="tabPanel-all" class="tab-panel space-y-3">
+            <table class="w-full text-xs text-left table-auto">
+                <thead class="bg-gray-100 text-gray-700">
+                    <tr>
+                        <th class="px-3 py-2">Result ID</th>
+                        <th class="px-3 py-2">Type</th>
+                        <th class="px-3 py-2">Source</th>
+                        <th class="px-3 py-2">Parameter</th>
+                        <th class="px-3 py-2">Value</th>
+                        <th class="px-3 py-2">Measured</th>
+                        <th class="px-3 py-2 text-center">Status</th>
+                        <th class="px-3 py-2 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="allResultsBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="8" class="px-3 py-6 text-center text-gray-400">Loading measurements...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="tabPanel-water" class="tab-panel hidden space-y-3">
+            <table class="w-full text-xs text-left table-auto">
+                <thead class="bg-gray-100 text-gray-700">
+                    <tr>
+                        <th class="px-3 py-2">Result ID</th>
+                        <th class="px-3 py-2">Source</th>
+                        <th class="px-3 py-2">Parameter</th>
+                        <th class="px-3 py-2">Value</th>
+                        <th class="px-3 py-2">Measured</th>
+                        <th class="px-3 py-2 text-center">Status</th>
+                        <th class="px-3 py-2 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="waterResultsBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="7" class="px-3 py-6 text-center text-gray-400">Loading water measurements...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="tabPanel-air" class="tab-panel hidden space-y-3">
+            <table class="w-full text-xs text-left table-auto">
+                <thead class="bg-gray-100 text-gray-700">
+                    <tr>
+                        <th class="px-3 py-2">Result ID</th>
+                        <th class="px-3 py-2">Source</th>
+                        <th class="px-3 py-2">Parameter</th>
+                        <th class="px-3 py-2">Value</th>
+                        <th class="px-3 py-2">Measured</th>
+                        <th class="px-3 py-2 text-center">Status</th>
+                        <th class="px-3 py-2 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="airResultsBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="7" class="px-3 py-6 text-center text-gray-400">Loading air measurements...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+<!-- Add Result Modal -->
+<div id="addResultModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5">
+    <div class="bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-4 h-fit">
+        <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-700">Add Measurement Result</h2>
+                <p class="text-[11px] text-gray-500">Record a new reading for water or air.</p>
+            </div>
+            <button type="button" id="closeAddResultBtn" class="text-gray-400 hover:text-gray-600">
+                <i class="bi bi-x-lg text-xs"></i>
+            </button>
+        </div>
+
+        <div class="space-y-3 text-xs" id="addResultContent">
+            <div>
+                <label class="block font-medium text-gray-700 mb-1">Measurement Type</label>
+                <div class="flex items-center gap-4">
+                    <label class="inline-flex items-center gap-1">
+                        <input type="radio" name="addResultType" value="water" class="text-blue-600 border-gray-300" checked />
+                        Water
+                    </label>
+                    <label class="inline-flex items-center gap-1">
+                        <input type="radio" name="addResultType" value="air" class="text-blue-600 border-gray-300" />
+                        Air
+                    </label>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Emission Source</label>
+                    <select id="addResultSource" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Parameter</label>
+                    <select id="addResultParameter" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Value</label>
+                    <input type="number" step="0.0001" id="addResultValue" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Unit</label>
+                    <input type="text" id="addResultUnit" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Measurement Date</label>
+                    <input type="datetime-local" id="addResultDate" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Status</label>
+                    <select id="addResultStatus" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        <option value="Approved">Approved</option>
+                        <option value="Pending">Pending</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Approved At</label>
+                    <input type="datetime-local" id="addResultApprovedAt" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Remark</label>
+                    <textarea id="addResultRemark" rows="3" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+            <button type="button" id="cancelAddResultBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                Cancel
+            </button>
+            <button type="button" id="saveResultBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
+                <i class="bi bi-save text-[11px]"></i>
+                Save Result
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Result Modal -->
+<div id="editResultModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5">
+    <div class="bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-4 h-fit">
+        <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-700">Update Measurement Result</h2>
+                <p class="text-[11px] text-gray-500">Adjust values, status, or remarks.</p>
+            </div>
+            <button type="button" id="closeEditResultBtn" class="text-gray-400 hover:text-gray-600">
+                <i class="bi bi-x-lg text-xs"></i>
+            </button>
+        </div>
+
+        <input type="hidden" id="editResultId" />
+
+        <div class="space-y-3 text-xs" id="editResultContent">
+            <div>
+                <label class="block font-medium text-gray-700 mb-1">Measurement Type</label>
+                <div class="flex items-center gap-4">
+                    <label class="inline-flex items-center gap-1">
+                        <input type="radio" name="editResultType" value="water" class="text-blue-600 border-gray-300" />
+                        Water
+                    </label>
+                    <label class="inline-flex items-center gap-1">
+                        <input type="radio" name="editResultType" value="air" class="text-blue-600 border-gray-300" />
+                        Air
+                    </label>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Emission Source</label>
+                    <select id="editResultSource" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Parameter</label>
+                    <select id="editResultParameter" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Value</label>
+                    <input type="number" step="0.0001" id="editResultValue" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Unit</label>
+                    <input type="text" id="editResultUnit" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Measurement Date</label>
+                    <input type="datetime-local" id="editResultDate" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Status</label>
+                    <select id="editResultStatus" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        <option value="Approved">Approved</option>
+                        <option value="Pending">Pending</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Approved At</label>
+                    <input type="datetime-local" id="editResultApprovedAt" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Remark</label>
+                    <textarea id="editResultRemark" rows="3" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center pt-2">
+            <button type="button" id="deleteResultBtn" class="text-xs text-red-600 hover:text-red-700 inline-flex items-center gap-1">
+                <i class="bi bi-trash-fill"></i>
+                Delete Result
+            </button>
+            <div class="flex gap-2">
+                <button type="button" id="cancelEditResultBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                    Close
+                </button>
+                <button type="button" id="updateResultBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
+                    <i class="bi bi-save"></i>
+                    Save changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        window.measurementResultLookups = {
+            emissionSources: @Html.Raw(emissionSourcesJson),
+            parameters: @Html.Raw(parametersJson)
+        };
+        window.measurementResultRoutes = {
+            list: '@Url.Action("ListData", "MeasurementResults")',
+            detail: '@Url.Action("DetailData", "MeasurementResults")',
+            create: '@Url.Action("CreateAjax", "MeasurementResults")',
+            update: '@Url.Action("UpdateAjax", "MeasurementResults")',
+            delete: '@Url.Action("DeleteAjax", "MeasurementResults")'
+        };
+    </script>
+    <script src="~/js/measurement-results-management.js" asp-append-version="true"></script>
+}

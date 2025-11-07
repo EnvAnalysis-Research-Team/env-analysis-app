@@ -12,6 +12,26 @@
             .replace(/'/g, '&#039;');
     }
 
+    const MODAL_ANIMATION_MS = 200;
+    const toggleModal = (modal, show) => {
+        if (!modal) return;
+        if (show) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            requestAnimationFrame(() => {
+                modal.classList.remove('-translate-y-5', 'opacity-0');
+                modal.classList.add('translate-y-0', 'opacity-100');
+            });
+        } else {
+            modal.classList.remove('translate-y-0', 'opacity-100');
+            modal.classList.add('-translate-y-5', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, MODAL_ANIMATION_MS);
+        }
+    };
+
     // Load source type list from server and render into the small table.
     async function loadSourceTypes() {
         try {
@@ -71,7 +91,7 @@
             document.getElementById('edit_IsActive').checked = !!(json.isActive ?? json.IsActive);
 
             // show modal
-            document.getElementById('editTypeModal').style.display = 'flex';
+            toggleModal(editTypeModal, true);
         } catch (err) {
             console.error(err);
             alert('Error loading source type details. See console.');
@@ -120,8 +140,8 @@
     const cancelEdit = document.getElementById('cancelEditBtn');
     const deleteBtn = document.getElementById('deleteTypeBtn');
 
-    if (closeEdit) closeEdit.addEventListener('click', () => document.getElementById('editTypeModal').style.display = 'none');
-    if (cancelEdit) cancelEdit.addEventListener('click', () => document.getElementById('editTypeModal').style.display = 'none');
+    if (closeEdit) closeEdit.addEventListener('click', () => toggleModal(editTypeModal, false));
+    if (cancelEdit) cancelEdit.addEventListener('click', () => toggleModal(editTypeModal, false));
 
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
@@ -205,33 +225,28 @@
 
     // --- ADD SOURCE TYPE MODAL CONTROL  ---
     const addTypeModal = document.getElementById('addTypeModal');
+    const editTypeModal = document.getElementById('editTypeModal');
     const openAddTypeBtn = document.getElementById('openAddTypeModalBtn');
     const closeAddTypeBtn = document.getElementById('closeAddTypeModal');
     const cancelAddTypeBtn = document.getElementById('cancelAddTypeBtn');
 
     if (openAddTypeBtn && addTypeModal) {
-        openAddTypeBtn.addEventListener('click', () => {
-            addTypeModal.style.display = 'flex';
-        });
+        openAddTypeBtn.addEventListener('click', () => toggleModal(addTypeModal, true));
     }
 
     if (closeAddTypeBtn) {
-        closeAddTypeBtn.addEventListener('click', () => {
-            addTypeModal.style.display = 'none';
-        });
+        closeAddTypeBtn.addEventListener('click', () => toggleModal(addTypeModal, false));
     }
 
     if (cancelAddTypeBtn) {
-        cancelAddTypeBtn.addEventListener('click', () => {
-            addTypeModal.style.display = 'none';
-        });
+        cancelAddTypeBtn.addEventListener('click', () => toggleModal(addTypeModal, false));
     }
 
     // Đóng modal khi click ra ngoài phần form
     if (addTypeModal) {
         addTypeModal.addEventListener('click', (e) => {
             if (e.target === addTypeModal) {
-                addTypeModal.style.display = 'none';
+                toggleModal(addTypeModal, false);
             }
         });
     }
@@ -243,28 +258,22 @@
     const cancelAddBtn = document.getElementById('cancelAddBtn');
 
     if (openAddSourceBtn && addSourceModal) {
-        openAddSourceBtn.addEventListener('click', () => {
-            addSourceModal.style.display = 'flex';
-        });
+        openAddSourceBtn.addEventListener('click', () => toggleModal(addSourceModal, true));
     }
 
     if (closeAddSourceBtn) {
-        closeAddSourceBtn.addEventListener('click', () => {
-            addSourceModal.style.display = 'none';
-        });
+        closeAddSourceBtn.addEventListener('click', () => toggleModal(addSourceModal, false));
     }
 
     if (cancelAddBtn) {
-        cancelAddBtn.addEventListener('click', () => {
-            addSourceModal.style.display = 'none';
-        });
+        cancelAddBtn.addEventListener('click', () => toggleModal(addSourceModal, false));
     }
 
     // Đóng modal khi click ra ngoài phần form
     if (addSourceModal) {
         addSourceModal.addEventListener('click', (e) => {
             if (e.target === addSourceModal) {
-                addSourceModal.style.display = 'none';
+                toggleModal(addSourceModal, false);
             }
         });
     }
@@ -304,7 +313,7 @@
                 addSourceForm.reset();
 
                 if (addSourceModal) {
-                    addSourceModal.style.display = 'none';
+                    toggleModal(addSourceModal, false);
                 }
 
                 // Reload so the new record and counts show up while staying on the same page.
@@ -413,7 +422,7 @@
                 if (sel && data.sourceTypeID)
                     sel.value = data.sourceTypeID ?? data.SourceTypeID;
 
-                editSourceModal.style.display = 'flex';
+                    toggleModal(editSourceModal, true);
             } catch (err) {
                 console.error(err);
                 alert('Error loading emission source details.');
@@ -422,11 +431,11 @@
     });
 
     // đóng modal
-    if (closeEditSourceBtn) closeEditSourceBtn.addEventListener('click', () => editSourceModal.style.display = 'none');
-    if (cancelEditSourceBtn) cancelEditSourceBtn.addEventListener('click', () => editSourceModal.style.display = 'none');
+    if (closeEditSourceBtn) closeEditSourceBtn.addEventListener('click', () => toggleModal(editSourceModal, false));
+    if (cancelEditSourceBtn) cancelEditSourceBtn.addEventListener('click', () => toggleModal(editSourceModal, false));
     if (editSourceModal) {
         editSourceModal.addEventListener('click', e => {
-            if (e.target === editSourceModal) editSourceModal.style.display = 'none';
+            if (e.target === editSourceModal) toggleModal(editSourceModal, false);
         });
     }
 

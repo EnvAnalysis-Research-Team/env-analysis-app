@@ -38,10 +38,24 @@
         }
     };
 
-    const toggleModal = (modal, visible) => {
+    const MODAL_ANIMATION_MS = 200;
+    const toggleModal = (modal, show) => {
         if (!modal) return;
-        modal.classList.toggle('hidden', !visible);
-        modal.classList.toggle('flex', visible);
+        if (show) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            requestAnimationFrame(() => {
+                modal.classList.remove('-translate-y-5', 'opacity-0');
+                modal.classList.add('translate-y-0', 'opacity-100');
+            });
+        } else {
+            modal.classList.remove('translate-y-0', 'opacity-100');
+            modal.classList.add('-translate-y-5', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, MODAL_ANIMATION_MS);
+        }
     };
 
     const resetAddFields = () => {
