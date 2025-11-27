@@ -89,6 +89,9 @@
         const container = document.getElementById('sourceMap');
         if (!container || typeof L === 'undefined') {
             console.warn('Leaflet scripts are missing; map disabled.');
+            if (container) {
+                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">Map assets missing.</div>';
+            }
             return;
         }
 
