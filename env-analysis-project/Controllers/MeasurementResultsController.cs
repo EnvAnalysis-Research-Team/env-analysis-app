@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using env_analysis_project.Data;
 using env_analysis_project.Models;
+using env_analysis_project.Validators;
 
 namespace env_analysis_project.Controllers
 {
@@ -189,21 +190,26 @@ namespace env_analysis_project.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ListData(string type)
+        public async Task<IActionResult> ListData(string? type)
         {
-            var normalizedType = NormalizeType(type);
+            var normalizedType = string.IsNullOrWhiteSpace(type) ? null : NormalizeType(type);
 
             var query = _context.MeasurementResult
                 .Include(m => m.EmissionSource)
                 .Include(m => m.Parameter)
                 .AsQueryable();
 
+            if (!string.IsNullOrEmpty(normalizedType))
+            {
+                query = query.Where(m => m.type == normalizedType);
+            }
+
             var results = await query
                 .OrderByDescending(m => m.MeasurementDate)
                 .Select(m => ToDto(m))
                 .ToListAsync();
 
-            return Json(results);
+            return Ok(ApiResponse.Success(results));
         }
 
         [HttpGet]
@@ -216,29 +222,40 @@ namespace env_analysis_project.Controllers
 
             if (measurement == null)
             {
-                return NotFound(new { success = false, error = "Measurement result not found." });
+                return NotFound(ApiResponse.Fail<MeasurementResultDto>("Measurement result not found."));
             }
 
-            return Json(ToDto(measurement));
+            return Ok(ApiResponse.Success(ToDto(measurement)));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAjax([FromBody] MeasurementResultRequest request)
         {
-            if (!ModelState.IsValid || request == null)
+            if (request == null)
             {
-                return BadRequest(new { success = false, error = "Invalid measurement result payload." });
+                return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Invalid measurement result payload."));
+            }
+
+            var validationErrors = MeasurementResultValidator.Validate(request).ToList();
+            if (!ModelState.IsValid)
+            {
+                validationErrors.AddRange(GetModelErrors());
+            }
+
+            if (validationErrors.Count > 0)
+            {
+                return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Invalid measurement result payload.", validationErrors));
             }
 
             if (!await _context.EmissionSource.AnyAsync(s => s.EmissionSourceID == request.EmissionSourceId))
             {
-                return BadRequest(new { success = false, error = "Emission source not found." });
+                return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Emission source not found."));
             }
 
             if (!await _context.Parameter.AnyAsync(p => p.ParameterCode == request.ParameterCode))
             {
-                return BadRequest(new { success = false, error = "Parameter not found." });
+                return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Parameter not found."));
             }
 
             var entity = new MeasurementResult
@@ -265,7 +282,7 @@ namespace env_analysis_project.Controllers
                 .Select(m => ToDto(m))
                 .FirstAsync();
 
-            return Json(new { success = true, message = "Measurement result created successfully.", data = dto });
+            return Ok(ApiResponse.Success(dto, "Measurement result created successfully."));
         }
 
         [HttpPut]
@@ -274,23 +291,34 @@ namespace env_analysis_project.Controllers
         {
             if (request == null)
             {
-                return BadRequest(new { success = false, error = "Invalid measurement result payload." });
+                return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Invalid measurement result payload."));
             }
 
             var entity = await _context.MeasurementResult.FindAsync(id);
             if (entity == null)
             {
-                return NotFound(new { success = false, error = "Measurement result not found." });
+                return NotFound(ApiResponse.Fail<MeasurementResultDto>("Measurement result not found."));
+            }
+
+            var validationErrors = MeasurementResultValidator.Validate(request).ToList();
+            if (!ModelState.IsValid)
+            {
+                validationErrors.AddRange(GetModelErrors());
+            }
+
+            if (validationErrors.Count > 0)
+            {
+                return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Invalid measurement result payload.", validationErrors));
             }
 
             if (!await _context.EmissionSource.AnyAsync(s => s.EmissionSourceID == request.EmissionSourceId))
             {
-                return BadRequest(new { success = false, error = "Emission source not found." });
+                return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Emission source not found."));
             }
 
             if (!await _context.Parameter.AnyAsync(p => p.ParameterCode == request.ParameterCode))
             {
-                return BadRequest(new { success = false, error = "Parameter not found." });
+                return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Parameter not found."));
             }
 
             entity.EmissionSourceID = request.EmissionSourceId;
@@ -312,7 +340,7 @@ namespace env_analysis_project.Controllers
                 .Select(m => ToDto(m))
                 .FirstAsync();
 
-            return Json(new { success = true, message = "Measurement result updated successfully.", data = dto });
+            return Ok(ApiResponse.Success(dto, "Measurement result updated successfully."));
         }
 
         [HttpDelete]
@@ -322,13 +350,13 @@ namespace env_analysis_project.Controllers
             var entity = await _context.MeasurementResult.FindAsync(id);
             if (entity == null)
             {
-                return NotFound(new { success = false, error = "Measurement result not found." });
+                return NotFound(ApiResponse.Fail<object?>("Measurement result not found."));
             }
 
             _context.MeasurementResult.Remove(entity);
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true, message = "Measurement result deleted successfully." });
+            return Ok(ApiResponse.Success<object?>(null, "Measurement result deleted successfully."));
         }
 
         private bool MeasurementResultExists(int id)
@@ -336,7 +364,7 @@ namespace env_analysis_project.Controllers
             return _context.MeasurementResult.Any(e => e.ResultID == id);
         }
 
-        private static string NormalizeType(string input)
+        private static string NormalizeType(string? input)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return "water";
@@ -367,42 +395,53 @@ namespace env_analysis_project.Controllers
         private sealed class LookupOption
         {
             public int Id { get; set; }
-            public string Label { get; set; }
+            public string Label { get; set; } = string.Empty;
         }
 
         private sealed class ParameterLookup
         {
-            public string Code { get; set; }
-            public string Label { get; set; }
+            public string Code { get; set; } = string.Empty;
+            public string Label { get; set; } = string.Empty;
+        }
+
+        private IReadOnlyCollection<string> GetModelErrors()
+        {
+            return ModelState
+                .Where(entry => entry.Value?.Errors?.Count > 0)
+                .SelectMany(entry => entry.Value!.Errors.Select(error =>
+                    string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? $"Invalid value for {entry.Key}"
+                        : error.ErrorMessage))
+                .ToArray();
         }
 
         public sealed class MeasurementResultDto
         {
             public int ResultID { get; set; }
-            public string Type { get; set; }
+            public string Type { get; set; } = string.Empty;
             public int EmissionSourceID { get; set; }
-            public string EmissionSourceName { get; set; }
-            public string ParameterCode { get; set; }
-            public string ParameterName { get; set; }
+            public string EmissionSourceName { get; set; } = string.Empty;
+            public string ParameterCode { get; set; } = string.Empty;
+            public string ParameterName { get; set; } = string.Empty;
             public DateTime? MeasurementDate { get; set; }
             public double? Value { get; set; }
-            public string Unit { get; set; }
-            public string Remark { get; set; }
+            public string? Unit { get; set; }
+            public string? Remark { get; set; }
             public bool IsApproved { get; set; }
             public DateTime? ApprovedAt { get; set; }
         }
 
         public sealed class MeasurementResultRequest
         {
-            public string Type { get; set; }
+            public string? Type { get; set; }
             public int EmissionSourceId { get; set; }
-            public string ParameterCode { get; set; }
+            public string ParameterCode { get; set; } = string.Empty;
             public DateTime MeasurementDate { get; set; }
             public double? Value { get; set; }
-            public string Unit { get; set; }
+            public string? Unit { get; set; }
             public bool IsApproved { get; set; }
             public DateTime? ApprovedAt { get; set; }
-            public string Remark { get; set; }
+            public string? Remark { get; set; }
         }
     }
 }

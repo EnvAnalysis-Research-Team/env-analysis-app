@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using env_analysis_project.Models;
+using env_analysis_project.Validators;
 
 namespace env_analysis_project.Controllers
 {
@@ -77,20 +78,22 @@ namespace env_analysis_project.Controllers
         public async Task<IActionResult> Details(string id)
         {
             if (id == null)
-                return BadRequest();
+                return BadRequest(ApiResponse.Fail<UserDetailsDto>("User identifier is required."));
 
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
-                return NotFound();
+                return NotFound(ApiResponse.Fail<UserDetailsDto>("User not found."));
 
-            return Json(new
+            var dto = new UserDetailsDto
             {
-                id = user.Id,
-                email = user.Email,
-                fullName = user.FullName,
-                role = user.Role,
-                createdAt = user.CreatedAt?.ToString("dd/MM/yyyy HH:mm")
-            });
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                FullName = user.FullName ?? string.Empty,
+                Role = user.Role,
+                CreatedAt = user.CreatedAt
+            };
+
+            return Ok(ApiResponse.Success(dto));
         }
 
         [HttpPost]
@@ -99,14 +102,27 @@ namespace env_analysis_project.Controllers
         {
             if (model == null || string.IsNullOrEmpty(model.Id))
             {
-                if (IsAjaxRequest()) return Json(new { success = false, error = "Invalid request." });
+                if (IsAjaxRequest()) return BadRequest(ApiResponse.Fail<object?>("Invalid request."));
                 return BadRequest();
+            }
+
+            var validationErrors = UserValidator.ValidateForUpdate(model).ToList();
+            if (!ModelState.IsValid)
+            {
+                validationErrors.AddRange(GetModelErrors());
+            }
+
+            if (validationErrors.Count > 0)
+            {
+                if (IsAjaxRequest()) return BadRequest(ApiResponse.Fail<object?>("Validation failed.", validationErrors));
+                TempData["Error"] = string.Join(Environment.NewLine, validationErrors);
+                return RedirectToAction(nameof(Index));
             }
 
             var user = await _userManager.FindByIdAsync(model.Id);
             if (user == null)
             {
-                if (IsAjaxRequest()) return Json(new { success = false, error = "User not found." });
+                if (IsAjaxRequest()) return NotFound(ApiResponse.Fail<object?>("User not found."));
                 return NotFound();
             }
 
@@ -131,20 +147,40 @@ namespace env_analysis_project.Controllers
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
             {
-                if (IsAjaxRequest()) return Json(new { success = true });
+                if (IsAjaxRequest()) return Ok(ApiResponse.Success<object?>(null, "User updated successfully."));
                 return RedirectToAction(nameof(Index));
             }
 
-            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            if (IsAjaxRequest()) return Json(new { success = false, error = errors });
+            var errors = result.Errors.Select(e => e.Description).ToList();
+            if (IsAjaxRequest()) return BadRequest(ApiResponse.Fail<object?>("Failed to update user.", errors));
 
-            TempData["Error"] = errors;
+            TempData["Error"] = string.Join(", ", errors);
             return RedirectToAction(nameof(Index));
         }
 
         private bool IsAjaxRequest()
         {
             return string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private IReadOnlyCollection<string> GetModelErrors()
+        {
+            return ModelState
+                .Where(entry => entry.Value?.Errors?.Count > 0)
+                .SelectMany(entry => entry.Value!.Errors.Select(error =>
+                    string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? $"Invalid value for {entry.Key}"
+                        : error.ErrorMessage))
+                .ToArray();
+        }
+
+        public sealed class UserDetailsDto
+        {
+            public string Id { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
+            public string FullName { get; set; } = string.Empty;
+            public string? Role { get; set; }
+            public DateTime? CreatedAt { get; set; }
         }
     }
 }

@@ -66,6 +66,12 @@
         activeTab: 'all'
     };
 
+    const unwrapApiResponse = (json) => {
+        if (!json || typeof json !== 'object') return json;
+        if (Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
+        return json;
+    };
+
     const MODAL_ANIMATION_MS = 200;
     const toggleModal = (modal, show) => {
         if (!modal) return;
@@ -180,7 +186,8 @@
         let message = `Request failed (${response.status})`;
         try {
             const payload = await response.json();
-            if (payload?.error) message = payload.error;
+            if (payload?.message) message = payload.message;
+            else if (payload?.error) message = payload.error;
         } catch {}
         throw new Error(message);
     };
@@ -189,7 +196,9 @@
         try {
             const res = await fetch(routes.list, { credentials: 'same-origin' });
             if (!res.ok) await handleErrorResponse(res);
-            const data = await res.json();
+            const json = await res.json();
+            if (json?.success === false) throw new Error(json?.message || 'Failed to load measurement results.');
+            const data = unwrapApiResponse(json);
             state.results = Array.isArray(data) ? data.map(d => ({ ...d, type: d.type || 'water' })) : [];
             renderTables();
         } catch (error) {
@@ -230,8 +239,9 @@
             });
             if (!res.ok) await handleErrorResponse(res);
             const json = await res.json();
-            if (!json?.success) throw new Error(json?.error || 'Failed to create measurement result.');
-            state.results.unshift(json.data);
+            if (json?.success === false) throw new Error(json?.message || json?.error || 'Failed to create measurement result.');
+            const created = unwrapApiResponse(json);
+            if (created) state.results.unshift(created);
             renderTables();
             toggleModal(elements.addModal, false);
         } catch (error) {
@@ -243,7 +253,9 @@
     const loadDetail = async (id) => {
         const res = await fetch(`${routes.detail}/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
         if (!res.ok) await handleErrorResponse(res);
-        return res.json();
+        const json = await res.json();
+        if (json?.success === false) throw new Error(json?.message || 'Failed to load measurement result detail.');
+        return unwrapApiResponse(json);
     };
 
     const openEditModal = async (id) => {
@@ -284,12 +296,15 @@
             });
             if (!res.ok) await handleErrorResponse(res);
             const json = await res.json();
-            if (!json?.success) throw new Error(json?.error || 'Failed to update measurement result.');
+            if (json?.success === false) throw new Error(json?.message || json?.error || 'Failed to update measurement result.');
+            const updated = unwrapApiResponse(json);
             const index = state.results.findIndex(r => r.resultID === Number(id));
-            if (index !== -1) {
-                state.results[index] = json.data;
-            } else {
-                state.results.unshift(json.data);
+            if (updated) {
+                if (index !== -1) {
+                    state.results[index] = updated;
+                } else {
+                    state.results.unshift(updated);
+                }
             }
             renderTables();
             toggleModal(elements.editModal, false);
@@ -309,7 +324,7 @@
             });
             if (!res.ok) await handleErrorResponse(res);
             const json = await res.json();
-            if (!json?.success) throw new Error(json?.error || 'Failed to delete measurement result.');
+            if (json?.success === false) throw new Error(json?.message || json?.error || 'Failed to delete measurement result.');
             state.results = state.results.filter(r => r.resultID !== Number(id));
             renderTables();
             toggleModal(elements.editModal, false);
