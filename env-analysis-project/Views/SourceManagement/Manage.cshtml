@@ -5,13 +5,23 @@
     ViewData["Title"] = "Source Management";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <style>
+        #sourceMap .leaflet-pane,
+        #sourceMap .leaflet-control-container {
+            z-index: 0;
+        }
+    </style>
+}
+
 <div class="max-w-8xl mx-auto bg-white shadow-sm rounded-md p-6 space-y-6">
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row justify-end md:items-center mb-4 gap-2">
         <!-- Nút mở modal thêm Source Type -->
-        <button type="button"
-                id="openAddTypeModalBtn"
-                class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-md transition">
+        <button type="button" id="openAddTypeModalBtn"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-md transition">
             + Add source type
         </button>
     </div>
@@ -21,9 +31,7 @@
         <!-- Map Widget -->
         <div class="col-span-8 md:col-span-6 bg-gray-100 border border-gray-200 rounded-lg p-4">
             <h2 class="text-sm font-semibold text-gray-700 mb-2">Map</h2>
-            <div class="w-full h-80 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-                <span class="text-sm">[ Map will render here ]</span>
-            </div>
+            <div id="sourceMap" class="w-full h-80 bg-gray-200 rounded-md overflow-hidden relative"></div>
         </div>
 
         <!-- Source Type Box (wider + table) -->
@@ -48,17 +56,19 @@
                                 var name = type.SourceTypeName;
                                 var count = type.Count;
 
-                                <tr class="type-row hover:bg-white cursor-pointer" data-id="@id"
-                                    data-name="@name" data-count="@count">
+                                <tr class="type-row hover:bg-white cursor-pointer" data-id="@id" data-name="@name"
+                                    data-count="@count">
                                     <td class="px-2 py-2 truncate" title="@name">@name</td>
                                     <td class="px-2 py-2 text-center font-medium">@count</td>
                                 </tr>
                             }
 
-                            @if ((ViewBag.SourceTypes == null) || (((IEnumerable<dynamic>)ViewBag.SourceTypes).Any() == false))
+                            @if ((ViewBag.SourceTypes == null) || (((IEnumerable<dynamic>)ViewBag.SourceTypes).Any() ==
+                                                        false))
                             {
                                 <tr id="noSourceTypesRow">
-                                    <td colspan="2" class="px-2 py-3 text-center text-xs text-gray-400">No source types found.</td>
+                                    <td colspan="2" class="px-2 py-3 text-center text-xs text-gray-400">No source types
+                                        found.</td>
                                 </tr>
                             }
                         </tbody>
@@ -73,39 +83,37 @@
         <div class="flex justify-between items-center mb-3">
             <h2 class="text-sm font-semibold text-gray-700">Emission Sources</h2>
             <form asp-action="Index" method="get" class="flex space-x-2">
-                <input type="text" name="search"
-                       placeholder="Search source..."
-                       value="@ViewData["CurrentFilter"]"
-                       class="text-xs border border-gray-300 rounded-md px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                <input type="text" name="search" placeholder="Search source..." value="@ViewData["CurrentFilter"]"
+                    class="text-xs border border-gray-300 rounded-md px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
 
                 <button type="submit"
-                        class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
                     <i class="bi bi-search text-[9px]"></i>
                     Search
                 </button>
 
                 <!-- nút Add -->
                 <button type="button" id="openAddSourceModalBtn"
-                        class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
                     <i class="bi bi-plus text-[9px]"></i>
                     Add
                 </button>
 
 
                 <a asp-action="ExportExcel" asp-controller="EmissionSource"
-                   class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
                     <i class="bi bi-file-earmark-excel text-[9px]"></i>
                     Export
                 </a>
 
                 <a asp-action="Index" asp-controller="EmissionSource"
-                   class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-md transition">
                     <i class="bi bi-arrow-clockwise text-[9px]"></i>
                     Refresh
                 </a>
 
                 <button type="reset"
-                        class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-black text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-black text-xs font-medium px-2.5 py-1 rounded-md transition">
                     <i class="bi bi-sliders text-[9px]"></i>
                     Reset
                 </button>
@@ -129,7 +137,11 @@
                 {
                     foreach (var src in Model)
                     {
-                        <tr class="hover:bg-gray-50 transition">
+                        <tr class="hover:bg-gray-50 transition emission-source-row"
+                            data-lat="@src.Latitude?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                            data-lng="@src.Longitude?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                            data-name="@src.SourceName"
+                            data-code="@src.SourceCode">
                             <td class="px-3 py-2">@src.SourceName</td>
                             <td class="px-3 py-2">@src.SourceCode</td>
                             <td class="px-3 py-2">@src.Location</td>
@@ -150,18 +162,16 @@
                                 <div class="flex items-center justify-center gap-2">
                                     <!-- Nút xem chi tiết -->
                                     <button type="button"
-                                            class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition"
-                                            title="View Details"
-                                            data-id="@src.EmissionSourceID">
+                                        class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition"
+                                        title="View Details" data-id="@src.EmissionSourceID">
                                         <i class="bi bi-eye text-[10px]"></i>
                                     </button>
 
                                     <!-- Nút xóa -->
                                     <button type="button"
-                                            class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition delete-source-btn"
-                                            data-id="@src.EmissionSourceID"
-                                            data-name="@src.SourceName"
-                                            title="Delete Emission Source">
+                                        class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition delete-source-btn"
+                                        data-id="@src.EmissionSourceID" data-name="@src.SourceName"
+                                        title="Delete Emission Source">
                                         <i class="bi bi-trash text-[10px]"></i>
                                     </button>
                                 </div>
@@ -184,7 +194,7 @@
 
     <!-- MODAL: Add Source Type -->
     <div id="addTypeModal"
-         class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5 !mt-0">
+        class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5 !mt-0">
         <div class="bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-4 h-fit">
             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
                 <h2 class="text-sm font-semibold text-gray-700">Add Source Type</h2>
@@ -193,33 +203,33 @@
                 </button>
             </div>
 
-            <form id="addTypeForm" asp-controller="SourceTypes" asp-action="Create" method="post" class="space-y-3 text-xs">
+            <form id="addTypeForm" asp-controller="SourceTypes" asp-action="Create" method="post"
+                class="space-y-3 text-xs">
                 @Html.AntiForgeryToken()
 
                 <div>
                     <label class="block font-medium text-gray-600 mb-1">Source Type Name</label>
                     <input type="text" name="SourceTypeName" required
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
                     <label class="block font-medium text-gray-600 mb-1">Description</label>
                     <textarea name="Description" rows="3"
-                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <input type="checkbox" name="IsActive" id="IsActive" value="true" checked   
-                           class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    <input type="checkbox" name="IsActive" id="IsActive" value="true" checked
+                        class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
 
                     <label for="IsActive" class="text-gray-700">Active</label>
                 </div>
                 <div class="flex justify-end space-x-2 pt-2">
-                    <button type="button"
-                            id="cancelAddTypeBtn"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                    <button type="button" id="cancelAddTypeBtn"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                         Cancel
                     </button>
                     <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
                         Save
                     </button>
                 </div>
@@ -229,7 +239,7 @@
 
     <!-- MODAL: Edit Source Type (JS-controlled) -->
     <div id="editTypeModal"
-         class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5 !mt-0">
+        class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5 !mt-0">
         <div class="bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-4 h-fit">
             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
                 <h2 class="text-sm font-semibold text-gray-700">View / Edit Source Type</h2>
@@ -245,16 +255,16 @@
                 <div>
                     <label class="block font-medium text-gray-600 mb-1">Source Type Name</label>
                     <input type="text" name="SourceTypeName" id="edit_SourceTypeName" required
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
                     <label class="block font-medium text-gray-600 mb-1">Description</label>
                     <textarea name="Description" id="edit_Description" rows="3"
-                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
                 <div class="flex items-center space-x-2">
                     <input type="checkbox" name="IsActive" id="edit_IsActive" value="true" checked"
-                           class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                     <label for="edit_IsActive" class="text-gray-700">Active</label>
                 </div>
 
@@ -267,11 +277,11 @@
 
                     <div class="flex space-x-2">
                         <button type="button" id="cancelEditBtn"
-                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                             Cancel
                         </button>
                         <button type="submit"
-                                class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
                             Save changes
                         </button>
                     </div>
@@ -282,7 +292,7 @@
 
     <!-- MODAL: Add Emission Source -->
     <div id="addSourceModal"
-         class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5 !mt-0">
+        class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5 !mt-0">
         <div class="bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-4 h-fit">
             <!-- HEADER -->
             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
@@ -293,44 +303,45 @@
             </div>
 
             <!-- FORM -->
-            <form id="addSourceForm" asp-controller="EmissionSources" asp-action="Create" method="post" class="space-y-3 text-xs">
+            <form id="addSourceForm" asp-controller="EmissionSources" asp-action="Create" method="post"
+                class="space-y-3 text-xs">
                 @Html.AntiForgeryToken()
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Source Code</label>
                         <input type="text" name="SourceCode" id="add_SourceCode" required
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
 
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Source Name</label>
                         <input type="text" name="SourceName" id="add_SourceName" required
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
 
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Latitude</label>
                         <input type="number" step="any" name="Latitude" id="add_Latitude"
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
 
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Longitude</label>
                         <input type="number" step="any" name="Longitude" id="add_Longitude"
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
 
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Location</label>
                         <input type="text" name="Location" id="add_Location"
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
 
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Source Type</label>
                         <select name="SourceTypeID" id="add_SourceTypeID" required
-                                class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                             <option value="">-- Select Type --</option>
                             @foreach (var type in ViewBag.SourceTypes ?? new List<dynamic>())
                             {
@@ -343,23 +354,23 @@
                 <div>
                     <label class="block font-medium text-gray-600 mb-1">Description</label>
                     <textarea name="Description" id="add_Description" rows="3"
-                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
 
                 <div class="flex items-center space-x-2">
                     <input type="checkbox" name="IsActive" id="add_IsActive" value="true" checked
-                           class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                     <label for="add_IsActive" class="text-gray-700">Active</label>
                 </div>
 
                 <!-- BUTTONS -->
                 <div class="flex justify-end items-center pt-2 space-x-2">
                     <button type="button" id="cancelAddBtn"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                         Cancel
                     </button>
                     <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
                         Save Source
                     </button>
                 </div>
@@ -368,7 +379,7 @@
     </div>
     <!-- MODAL: View / Edit Emission Source -->
     <div id="editSourceModal"
-         class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5 !mt-0">
+        class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5 !mt-0">
         <div class="bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-4 h-fit">
             <!-- HEADER -->
             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
@@ -381,38 +392,38 @@
             <!-- FORM -->
             <form asp-controller="EmissionSources" id="editSourceForm" method="post" class="space-y-3 text-xs">
                 @Html.AntiForgeryToken()
-                <input type="text" name="EmissionSourceID" id="edit_SourceID" />
+                <input type="hidden" name="EmissionSourceID" id="edit_SourceID" />
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Source Code</label>
                         <input type="text" name="SourceCode" id="edit_SourceCode"
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Source Name</label>
                         <input type="text" name="SourceName" id="edit_SourceName"
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Latitude</label>
                         <input type="number" step="any" name="Latitude" id="edit_Latitude"
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Longitude</label>
                         <input type="number" step="any" name="Longitude" id="edit_Longitude"
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Location</label>
                         <input type="text" name="Location" id="edit_Location"
-                               class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                     </div>
                     <div>
                         <label class="block font-medium text-gray-600 mb-1">Source Type</label>
                         <select name="SourceTypeID" id="emission_sources_stid"
-                                class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                             <option value="">-- Select Type --</option>
                             @foreach (var type in ViewBag.SourceTypes ?? new List<dynamic>())
                             {
@@ -425,27 +436,26 @@
                 <div>
                     <label class="block font-medium text-gray-600 mb-1">Description</label>
                     <textarea name="Description" id="emission_sources_des" rows="3"
-                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
 
                 <div class="flex items-center space-x-2">
                     <input type="checkbox" name="IsActive" id="edit_IsActiveSource" value="true" checked
-                           class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        class="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                     <label for="edit_IsActiveSource" class="text-gray-700">Active</label>
                 </div>
 
                 <div class="flex justify-between items-center pt-2">
-                    <button type="button" id="deleteSourceBtn"
-                            class="text-xs text-red-600 hover:text-red-800">
+                    <button type="button" id="deleteSourceBtn" class="text-xs text-red-600 hover:text-red-800">
                         Delete
                     </button>
                     <div class="space-x-2">
                         <button type="button" id="cancelEditSourceBtn"
-                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                             Cancel
                         </button>
                         <button type="submit"
-                                class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition">
                             Save changes
                         </button>
                     </div>
@@ -456,6 +466,8 @@
 </div>
 
 @section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         window.sourceManagementConfig = {
             deleteUrl: '@Url.Action("Delete", "EmissionSources")'

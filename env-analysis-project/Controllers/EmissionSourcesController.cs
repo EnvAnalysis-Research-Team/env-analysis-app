@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using env_analysis_project.Data;
 using env_analysis_project.Models;
+using env_analysis_project.Validators;
 
 namespace env_analysis_project.Controllers
 {
@@ -19,7 +22,7 @@ namespace env_analysis_project.Controllers
         // =============================
         public async Task<IActionResult> Index()
         {
-            // Lấy danh sách nguồn phát thải và loại nguồn
+            // Load emission sources and their types
             var emissionSources = await _context.EmissionSource
                 .Include(e => e.SourceType)
                 .OrderBy(e => e.SourceName)
@@ -43,106 +46,62 @@ namespace env_analysis_project.Controllers
                 .FirstOrDefaultAsync(e => e.EmissionSourceID == id);
 
             if (source == null)
-                return NotFound();
+                return NotFound(ApiResponse.Fail<EmissionSourceResponse>("Emission source not found."));
 
-            var result = new
-            {
-                source.EmissionSourceID,
-                source.SourceCode,
-                source.SourceName,
-                source.Description,
-                source.Location,
-                source.Latitude,
-                source.Longitude,
-                source.IsActive,
-                source.CreatedAt,
-                source.UpdatedAt,
-                source.SourceTypeID,
-                SourceTypeName = source.SourceType?.SourceTypeName
-            };
-
-            return Json(result);
+            return Ok(ApiResponse.Success(ToDto(source)));
         }
 
         // =============================
-        //  CREATE (FORM)
+        //  CREATE
         // =============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([FromForm] EmissionSource model)
         {
-            var isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", System.StringComparison.OrdinalIgnoreCase);
-
+            var validationErrors = EmissionSourceValidator.Validate(model).ToList();
             if (!ModelState.IsValid)
             {
-                var errors = ModelState
-                    .Where(entry => entry.Value?.Errors?.Count > 0)
-                    .SelectMany(entry => entry.Value!.Errors.Select(error =>
-                        string.IsNullOrWhiteSpace(error.ErrorMessage)
-                            ? $"Invalid value for {entry.Key}"
-                            : error.ErrorMessage))
-                    .ToList();
+                validationErrors.AddRange(GetModelErrors());
+            }
 
-                if (isAjax)
-                {
-                    return BadRequest(new { success = false, errors });
-                }
-
-                return BadRequest(ModelState);
+            if (validationErrors.Count > 0)
+            {
+                return BadRequest(ApiResponse.Fail<EmissionSourceResponse>("Validation failed.", validationErrors));
             }
 
             model.CreatedAt = DateTime.Now;
-
-            // Nếu người dùng để trống => gán null
             model.Location = string.IsNullOrWhiteSpace(model.Location) ? null : model.Location;
             model.Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description;
 
             _context.EmissionSource.Add(model);
             await _context.SaveChangesAsync();
+            await _context.Entry(model).Reference(e => e.SourceType).LoadAsync();
 
-            var response = new
-            {
-                success = true,
-                message = "Emission source created successfully!",
-                data = new
-                {
-                    model.EmissionSourceID,
-                    model.SourceCode,
-                    model.SourceName,
-                    model.SourceTypeID,
-                    model.Location,
-                    model.Latitude,
-                    model.Longitude,
-                    model.IsActive
-                }
-            };
-
-            if (isAjax)
-            {
-                return Json(response);
-            }
-
-            TempData["SuccessMessage"] = response.message;
-            return RedirectToAction(nameof(Index));
+            return Ok(ApiResponse.Success(ToDto(model), "Emission source created successfully!"));
         }
 
         // =============================
-        //  EDIT (AJAX)
+        //  EDIT
         // =============================
         [HttpPost]
         public async Task<IActionResult> Edit(int id, [FromForm] EmissionSource model)
         {
             if (id != model.EmissionSourceID)
-                return BadRequest(new { error = "Invalid ID" });
+                return BadRequest(ApiResponse.Fail<EmissionSourceResponse>("Invalid emission source identifier."));
 
             var existing = await _context.EmissionSource.FindAsync(id);
             if (existing == null)
-                return NotFound(new { error = "Emission Source not found" });
+                return NotFound(ApiResponse.Fail<EmissionSourceResponse>("Emission source not found."));
 
+            var validationErrors = EmissionSourceValidator.Validate(model).ToList();
             if (!ModelState.IsValid)
-                return BadRequest(new { error = "Invalid data" });
+            {
+                validationErrors.AddRange(GetModelErrors());
+            }
 
-            // Cập nhật thủ công từng trường
+            if (validationErrors.Count > 0)
+                return BadRequest(ApiResponse.Fail<EmissionSourceResponse>("Validation failed.", validationErrors));
+
             existing.SourceCode = model.SourceCode;
             existing.SourceName = model.SourceName;
             existing.SourceTypeID = model.SourceTypeID;
@@ -154,54 +113,34 @@ namespace env_analysis_project.Controllers
             existing.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
+            await _context.Entry(existing).Reference(e => e.SourceType).LoadAsync();
 
-            return Json(new { success = true, message = "Emission source updated successfully!" });
+            return Ok(ApiResponse.Success(ToDto(existing), "Emission source updated successfully!"));
         }
 
         // =============================
-        //  DELETE (AJAX)
+        //  DELETE
         // =============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete([FromBody] DeleteEmissionSourceRequest request)
         {
-            var isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
-
-            if (request == null || request.Id <= 0)
+            var validationErrors = EmissionSourceValidator.ValidateDelete(request).ToList();
+            if (validationErrors.Count > 0)
             {
-                const string invalidMessage = "Invalid emission source identifier.";
-                if (isAjax)
-                {
-                    return BadRequest(new { success = false, error = invalidMessage });
-                }
-
-                TempData["ErrorMessage"] = invalidMessage;
-                return RedirectToAction(nameof(Index));
+                return BadRequest(ApiResponse.Fail<object?>("Invalid emission source identifier.", validationErrors));
             }
 
             var emissionSource = await _context.EmissionSource.FindAsync(request.Id);
             if (emissionSource == null)
             {
-                if (isAjax)
-                {
-                    return NotFound(new { success = false, error = "Emission Source not found." });
-                }
-
-                TempData["ErrorMessage"] = "Emission Source not found.";
-                return RedirectToAction(nameof(Index));
+                return NotFound(ApiResponse.Fail<object?>("Emission source not found."));
             }
 
             _context.EmissionSource.Remove(emissionSource);
             await _context.SaveChangesAsync();
 
-            var response = new { success = true, message = "Emission source deleted successfully!" };
-            if (isAjax)
-            {
-                return Json(response);
-            }
-
-            TempData["SuccessMessage"] = response.message;
-            return RedirectToAction(nameof(Index));
+            return Ok(ApiResponse.Success(new { request.Id }, "Emission source deleted successfully!"));
         }
 
 
@@ -211,6 +150,52 @@ namespace env_analysis_project.Controllers
         private bool EmissionSourceExists(int id)
         {
             return _context.EmissionSource.Any(e => e.EmissionSourceID == id);
+        }
+
+        private IReadOnlyCollection<string> GetModelErrors()
+        {
+            return ModelState
+                .Where(entry => entry.Value?.Errors?.Count > 0)
+                .SelectMany(entry => entry.Value!.Errors.Select(error =>
+                    string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? $"Invalid value for {entry.Key}"
+                        : error.ErrorMessage))
+                .ToArray();
+        }
+
+        private static EmissionSourceResponse ToDto(EmissionSource source)
+        {
+            return new EmissionSourceResponse
+            {
+                EmissionSourceID = source.EmissionSourceID,
+                SourceCode = source.SourceCode,
+                SourceName = source.SourceName,
+                Description = source.Description,
+                Location = source.Location,
+                Latitude = source.Latitude,
+                Longitude = source.Longitude,
+                IsActive = source.IsActive,
+                CreatedAt = source.CreatedAt,
+                UpdatedAt = source.UpdatedAt,
+                SourceTypeID = source.SourceTypeID,
+                SourceTypeName = source.SourceType?.SourceTypeName
+            };
+        }
+
+        private sealed class EmissionSourceResponse
+        {
+            public int EmissionSourceID { get; set; }
+            public string SourceCode { get; set; } = string.Empty;
+            public string SourceName { get; set; } = string.Empty;
+            public string? Description { get; set; }
+            public string? Location { get; set; }
+            public double? Latitude { get; set; }
+            public double? Longitude { get; set; }
+            public bool IsActive { get; set; }
+            public DateTime? CreatedAt { get; set; }
+            public DateTime? UpdatedAt { get; set; }
+            public int SourceTypeID { get; set; }
+            public string? SourceTypeName { get; set; }
         }
 
         public sealed class DeleteEmissionSourceRequest

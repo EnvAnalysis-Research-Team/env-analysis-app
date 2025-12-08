@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using env_analysis_project.Data;
 using env_analysis_project.Models;
+using env_analysis_project.Validators;
 
 namespace env_analysis_project.Controllers
 {
@@ -63,13 +64,31 @@ namespace env_analysis_project.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ParameterCode,ParameterName,Unit,StandardValue,Description,CreatedAt,UpdatedAt")] Parameter parameter)
         {
-            if (ModelState.IsValid)
+            var validationErrors = ParameterValidator.Validate(parameter).ToList();
+            if (!ModelState.IsValid)
             {
-                _context.Add(parameter);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                validationErrors.AddRange(GetModelErrors());
             }
-            return View(parameter);
+
+            if (validationErrors.Count > 0)
+            {
+                foreach (var error in validationErrors)
+                {
+                    ModelState.AddModelError(string.Empty, error);
+                }
+                return View(parameter);
+            }
+
+            parameter.ParameterCode = parameter.ParameterCode.Trim();
+            parameter.ParameterName = parameter.ParameterName.Trim();
+            parameter.Unit = string.IsNullOrWhiteSpace(parameter.Unit) ? null : parameter.Unit.Trim();
+            parameter.Description = string.IsNullOrWhiteSpace(parameter.Description) ? null : parameter.Description.Trim();
+            parameter.CreatedAt = DateTime.UtcNow;
+            parameter.UpdatedAt = DateTime.UtcNow;
+
+            _context.Add(parameter);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Parameters/Edit/5
@@ -100,27 +119,43 @@ namespace env_analysis_project.Controllers
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+            var validationErrors = ParameterValidator.Validate(parameter).ToList();
+            if (!ModelState.IsValid)
             {
-                try
-                {
-                    _context.Update(parameter);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!ParameterExists(parameter.ParameterCode))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+                validationErrors.AddRange(GetModelErrors());
             }
-            return View(parameter);
+
+            if (validationErrors.Count > 0)
+            {
+                foreach (var error in validationErrors)
+                {
+                    ModelState.AddModelError(string.Empty, error);
+                }
+                return View(parameter);
+            }
+
+            try
+            {
+                parameter.ParameterName = parameter.ParameterName.Trim();
+                parameter.Unit = string.IsNullOrWhiteSpace(parameter.Unit) ? null : parameter.Unit.Trim();
+                parameter.Description = string.IsNullOrWhiteSpace(parameter.Description) ? null : parameter.Description.Trim();
+                parameter.UpdatedAt = DateTime.UtcNow;
+
+                _context.Update(parameter);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ParameterExists(parameter.ParameterCode))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Parameters/Delete/5
@@ -167,7 +202,7 @@ namespace env_analysis_project.Controllers
                 .Select(p => ToDto(p))
                 .ToListAsync();
 
-            return Json(parameters);
+            return Ok(ApiResponse.Success(parameters));
         }
 
         [HttpGet]
@@ -175,30 +210,32 @@ namespace env_analysis_project.Controllers
         {
             if (string.IsNullOrWhiteSpace(id))
             {
-                return BadRequest(new { success = false, error = "Parameter code is required." });
+                return BadRequest(ApiResponse.Fail<ParameterDto>("Parameter code is required."));
             }
 
-            var parameter = await _context.Parameter.FindAsync(id);
+            var code = id.Trim();
+            var parameter = await _context.Parameter.FindAsync(code);
             if (parameter == null)
             {
-                return NotFound(new { success = false, error = "Parameter not found." });
+                return NotFound(ApiResponse.Fail<ParameterDto>("Parameter not found."));
             }
 
-            return Json(ToDto(parameter));
+            return Ok(ApiResponse.Success(ToDto(parameter)));
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateAjax([FromBody] ParameterDto dto)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.ParameterCode) || string.IsNullOrWhiteSpace(dto.ParameterName))
+            var validationErrors = ParameterValidator.ValidateDto(dto).ToList();
+            if (validationErrors.Count > 0)
             {
-                return BadRequest(new { success = false, error = "Parameter code and name are required." });
+                return BadRequest(ApiResponse.Fail<ParameterDto>("Validation failed.", validationErrors));
             }
 
-            var code = dto.ParameterCode.Trim();
+            var code = dto!.ParameterCode.Trim();
             if (await _context.Parameter.AnyAsync(p => p.ParameterCode == code))
             {
-                return Conflict(new { success = false, error = $"Parameter with code '{code}' already exists." });
+                return Conflict(ApiResponse.Fail<ParameterDto>($"Parameter with code '{code}' already exists."));
             }
 
             var entity = new Parameter
@@ -215,7 +252,7 @@ namespace env_analysis_project.Controllers
             _context.Parameter.Add(entity);
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true, message = "Parameter created successfully.", data = ToDto(entity) });
+            return Ok(ApiResponse.Success(ToDto(entity), "Parameter created successfully."));
         }
 
         [HttpPut]
@@ -223,21 +260,23 @@ namespace env_analysis_project.Controllers
         {
             if (string.IsNullOrWhiteSpace(id))
             {
-                return BadRequest(new { success = false, error = "Parameter code is required." });
+                return BadRequest(ApiResponse.Fail<ParameterDto>("Parameter code is required."));
             }
 
-            var parameter = await _context.Parameter.FindAsync(id);
+            var code = id.Trim();
+            var parameter = await _context.Parameter.FindAsync(code);
             if (parameter == null)
             {
-                return NotFound(new { success = false, error = "Parameter not found." });
+                return NotFound(ApiResponse.Fail<ParameterDto>("Parameter not found."));
             }
 
-            if (dto == null || string.IsNullOrWhiteSpace(dto.ParameterName))
+            var validationErrors = ParameterValidator.ValidateDto(dto, isUpdate: true).ToList();
+            if (validationErrors.Count > 0)
             {
-                return BadRequest(new { success = false, error = "Parameter name is required." });
+                return BadRequest(ApiResponse.Fail<ParameterDto>("Validation failed.", validationErrors));
             }
 
-            parameter.ParameterName = dto.ParameterName.Trim();
+            parameter.ParameterName = dto!.ParameterName.Trim();
             parameter.Unit = string.IsNullOrWhiteSpace(dto.Unit) ? null : dto.Unit.Trim();
             parameter.StandardValue = dto.StandardValue;
             parameter.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
@@ -245,27 +284,39 @@ namespace env_analysis_project.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true, message = "Parameter updated successfully.", data = ToDto(parameter) });
+            return Ok(ApiResponse.Success(ToDto(parameter), "Parameter updated successfully."));
         }
 
         [HttpDelete]
         public async Task<IActionResult> DeleteAjax(string id)
         {
-            if (string.IsNullOrWhiteSpace(id))
+            var validationErrors = ParameterValidator.ValidateIdentifier(id).ToList();
+            if (validationErrors.Count > 0)
             {
-                return BadRequest(new { success = false, error = "Parameter code is required." });
+                return BadRequest(ApiResponse.Fail<object?>(validationErrors[0], validationErrors));
             }
 
-            var parameter = await _context.Parameter.FindAsync(id);
+            var parameter = await _context.Parameter.FindAsync(id.Trim());
             if (parameter == null)
             {
-                return NotFound(new { success = false, error = "Parameter not found." });
+                return NotFound(ApiResponse.Fail<object?>("Parameter not found."));
             }
 
             _context.Parameter.Remove(parameter);
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true, message = "Parameter deleted successfully." });
+            return Ok(ApiResponse.Success<object?>(null, "Parameter deleted successfully."));
+        }
+
+        private IReadOnlyCollection<string> GetModelErrors()
+        {
+            return ModelState
+                .Where(entry => entry.Value?.Errors?.Count > 0)
+                .SelectMany(entry => entry.Value!.Errors.Select(error =>
+                    string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? $"Invalid value for {entry.Key}"
+                        : error.ErrorMessage))
+                .ToArray();
         }
 
         private bool ParameterExists(string id)
@@ -289,12 +340,12 @@ namespace env_analysis_project.Controllers
 
         public sealed class ParameterDto
         {
-            public string ParameterCode { get; set; }
-            public string ParameterName { get; set; }
-            public string Unit { get; set; }
+            public string ParameterCode { get; set; } = string.Empty;
+            public string ParameterName { get; set; } = string.Empty;
+            public string? Unit { get; set; }
             public double? StandardValue { get; set; }
-            public string Description { get; set; }
-            public DateTime CreatedAt { get; set; }
+            public string? Description { get; set; }
+            public DateTime? CreatedAt { get; set; }
             public DateTime? UpdatedAt { get; set; }
         }
     }
