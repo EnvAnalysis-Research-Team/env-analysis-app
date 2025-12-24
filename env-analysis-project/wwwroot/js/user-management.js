@@ -1,55 +1,89 @@
 'use strict';
 
 (function () {
-    const showModal = (modalId, contentId) => {
-        const modal = document.getElementById(modalId);
-        const content = document.getElementById(contentId);
-        if (!modal || !content) return;
-
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            content.classList.remove('scale-95', 'opacity-0');
-            content.classList.add('scale-100', 'opacity-100');
-        }, 10);
+    const getAntiForgeryToken = () => {
+        const tokenInput =
+            document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]') ??
+            document.querySelector('input[name="__RequestVerificationToken"]');
+        return tokenInput?.value ?? '';
     };
 
-    const hideModal = (modalId, contentId) => {
-        const modal = document.getElementById(modalId);
-        const content = document.getElementById(contentId);
-        if (!modal || !content) return;
+    const fetchJson = (url, { method = 'GET', body, headers = {} } = {}) => {
+        const finalHeaders = {
+            'X-Requested-With': 'XMLHttpRequest',
+            ...headers
+        };
 
-        content.classList.remove('scale-100', 'opacity-100');
-        content.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-        }, 200);
+        const token = getAntiForgeryToken();
+        if (token) {
+            finalHeaders['RequestVerificationToken'] = token;
+        }
+
+        return fetch(url, {
+            method,
+            body,
+            headers: finalHeaders,
+            credentials: 'same-origin'
+        });
     };
 
-    async function openDetailModal(id) {
+    const postJson = (url, payload) =>
+        fetchJson(url, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+    const toggleAppModal = (modalId, open) => {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList[open ? 'add' : 'remove']('app-modal--open');
+        modal.setAttribute('aria-hidden', open ? 'false' : 'true');
+    };
+
+    const toggleFilterModal = (open) => toggleAppModal('filterModal', open);
+    const showModal = (modalId) => toggleAppModal(modalId, true);
+    const hideModal = (modalId) => toggleAppModal(modalId, false);
+
+    const formatDate = (value) => {
+        if (!value) return '-';
+        try {
+            return new Date(value).toLocaleString();
+        } catch {
+            return value;
+        }
+    };
+
+    const loadUserDetails = async (id) => {
+        if (!id) throw new Error('User identifier is required.');
+
+        const res = await fetchJson(`/UserManagement/Details/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error('Failed to fetch user details.');
+
+        const data = await res.json();
+        return data?.data ?? data;
+    };
+
+    async function openEditModal(id) {
         if (!id) return;
 
         try {
-            const res = await fetch(`/UserManagement/Details/${encodeURIComponent(id)}`, {
-                credentials: 'same-origin'
-            });
-            if (!res.ok) throw new Error('Failed to fetch user details.');
-
-            const data = await res.json();
+            const payload = await loadUserDetails(id);
             const assignValue = (inputId, value) => {
                 const el = document.getElementById(inputId);
                 if (el) el.value = value ?? '';
             };
 
-            assignValue('detailId', data.id ?? data.Id);
-            assignValue('detailEmail', data.email ?? data.Email);
-            assignValue('detailFullName', data.fullName ?? data.FullName);
-            assignValue('detailRole', data.role ?? data.Role);
-            assignValue('detailCreatedAt', data.createdAt ?? data.CreatedAt);
+            assignValue('editId', payload.id ?? payload.Id);
+            assignValue('editEmail', payload.email ?? payload.Email);
+            assignValue('editFullName', payload.fullName ?? payload.FullName);
+            assignValue('editRole', payload.role ?? payload.Role);
+            assignValue('editCreatedAt', formatDate(payload.createdAt ?? payload.CreatedAt));
 
-            showModal('detailModal', 'detailModalContent');
+            showModal('editModal');
         } catch (error) {
             console.error(error);
-            alert('Error loading user details. Please try again.');
+            alert(error.message || 'Error loading user details. Please try again.');
         }
     }
 
@@ -60,15 +94,15 @@
             return;
         }
 
-        const formData = new FormData(form);
+        const payload = {
+            Id: form.querySelector('#editId')?.value ?? '',
+            Email: form.querySelector('#editEmail')?.value ?? '',
+            FullName: form.querySelector('#editFullName')?.value ?? '',
+            Role: form.querySelector('#editRole')?.value ?? ''
+        };
 
         try {
-            const res = await fetch('/UserManagement/Update', {
-                method: 'POST',
-                body: formData,
-                credentials: 'same-origin',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
+            const res = await postJson('/UserManagement/Update', payload);
 
             if (!res.ok) {
                 let errText = 'Failed to update user. Server returned ' + res.status;
@@ -84,7 +118,7 @@
             const result = await res.json();
             if (result?.success) {
                 alert('User updated successfully!');
-                hideModal('detailModal', 'detailModalContent');
+                hideModal('editModal');
                 window.location.reload();
             } else {
                 alert(result?.error || 'Failed to update user. Please check your input.');
@@ -95,9 +129,111 @@
         }
     }
 
-    window.openAddModal = () => showModal('addModal', 'addModalContent');
-    window.closeAddModal = () => hideModal('addModal', 'addModalContent');
-    window.openDetailModal = openDetailModal;
-    window.closeDetailModal = () => hideModal('detailModal', 'detailModalContent');
+    async function createUser() {
+        const form = document.getElementById('addUserForm');
+        if (!form) {
+            alert('Create form not found.');
+            return;
+        }
+
+        const payload = {
+            Email: form.querySelector('#addEmail')?.value ?? '',
+            FullName: form.querySelector('#addFullName')?.value ?? '',
+            Role: form.querySelector('#addRole')?.value ?? '',
+            Password: form.querySelector('#addPassword')?.value ?? ''
+        };
+
+        try {
+            const res = await postJson('/UserManagement/Create', payload);
+            const result = await res.json();
+
+            if (res.ok && result?.success) {
+                alert(result.message || 'User created successfully.');
+                hideModal('addModal');
+                window.location.reload();
+                return;
+            }
+
+            const errMessage = result?.message || result?.error || 'Failed to create user.';
+            throw new Error(
+                result?.errors?.length ? `${errMessage}\n- ${result.errors.join('\n- ')}` : errMessage
+            );
+        } catch (error) {
+            console.error(error);
+            alert(error.message || 'Error while creating user.');
+        }
+    }
+
+    async function deleteUser(id) {
+        if (!id) return;
+        if (!confirm('Are you sure you want to delete this user?')) return;
+
+        try {
+            const res = await postJson('/UserManagement/Delete', { Id: id });
+            const result = await res.json();
+
+            if (res.ok && result?.success) {
+                alert(result.message || 'User deleted successfully.');
+                window.location.reload();
+                return;
+            }
+
+            const errMessage = result?.message || result?.error || 'Failed to delete user.';
+            throw new Error(
+                result?.errors?.length ? `${errMessage}\n- ${result.errors.join('\n- ')}` : errMessage
+            );
+        } catch (error) {
+            console.error(error);
+            alert(error.message || 'Error while deleting user.');
+        }
+    }
+
+    const wireDismissOnBackdrop = (modalId, closeFn) => {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) closeFn();
+        });
+    };
+
+    wireDismissOnBackdrop('filterModal', () => toggleFilterModal(false));
+    wireDismissOnBackdrop('editModal', () => hideModal('editModal'));
+    wireDismissOnBackdrop('addModal', () => hideModal('addModal'));
+
+    window.openAddModal = () => showModal('addModal');
+    window.closeAddModal = () => hideModal('addModal');
+    window.openEditModal = openEditModal;
+    window.closeEditModal = () => hideModal('editModal');
     window.saveUserChanges = saveUserChanges;
+    window.createUser = createUser;
+    window.deleteUser = deleteUser;
+    window.openFilterModal = () => toggleFilterModal(true);
+    window.closeFilterModal = () => toggleFilterModal(false);
+
+    const paginationForm = document.getElementById('paginationForm');
+    const paginationPageInput = paginationForm?.querySelector('input[name="page"]');
+    const paginationPageSizeInput = paginationForm?.querySelector('input[name="pageSize"]');
+    const userPageSizeSelect = document.getElementById('userPageSizeSelect');
+
+    window.changeUserPage = (page) => {
+        if (!paginationForm || !paginationPageInput) return;
+        const target = Math.max(1, Number(page) || 1);
+        paginationPageInput.value = target.toString();
+        paginationForm.submit();
+    };
+
+    userPageSizeSelect?.addEventListener('change', (event) => {
+        if (!paginationForm || !paginationPageSizeInput || !paginationPageInput) return;
+        const size = Number(event.target.value) || 10;
+        paginationPageSizeInput.value = size.toString();
+        paginationPageInput.value = '1';
+        paginationForm.submit();
+    });
+
+    const exportBtn = document.getElementById('exportUsersBtn');
+    exportBtn?.addEventListener('click', () => {
+        const query = window.location.search || '';
+        const url = `/UserManagement/Export${query}`;
+        window.open(url, '_blank');
+    });
 })();

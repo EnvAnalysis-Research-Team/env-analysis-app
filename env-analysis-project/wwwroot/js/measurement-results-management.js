@@ -182,24 +182,19 @@
         return json;
     };
 
-    const MODAL_ANIMATION_MS = 200;
-    const toggleModal = (modal, show) => {
+    const toggleAppModal = (modal, open) => {
         if (!modal) return;
-        if (show) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            requestAnimationFrame(() => {
-                modal.classList.remove('-translate-y-5', 'opacity-0');
-                modal.classList.add('translate-y-0', 'opacity-100');
-            });
-        } else {
-            modal.classList.remove('translate-y-0', 'opacity-100');
-            modal.classList.add('-translate-y-5', 'opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, MODAL_ANIMATION_MS);
-        }
+        modal.classList[open ? 'add' : 'remove']('app-modal--open');
+        modal.setAttribute('aria-hidden', open ? 'false' : 'true');
+    };
+
+    const registerModalDismiss = (modal, closeHandler) => {
+        if (!modal) return;
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeHandler();
+            }
+        });
     };
 
     const formatDate = (value) => {
@@ -997,7 +992,7 @@
             const json = await res.json();
             if (json?.success === false) throw new Error(json?.message || json?.error || 'Failed to create measurement result.');
             await refreshActiveTab(true);
-            toggleModal(elements.addModal, false);
+            toggleAppModal(elements.addModal, false);
         } catch (error) {
             console.error(error);
             alert(error.message || 'Failed to create measurement result.');
@@ -1027,7 +1022,7 @@
             document.querySelectorAll('input[name="editResultType"]').forEach(radio => {
                 radio.checked = radio.value === (data.type || 'water');
             });
-            toggleModal(elements.editModal, true);
+            toggleAppModal(elements.editModal, true);
         } catch (error) {
             console.error(error);
             alert(error.message || 'Failed to load measurement result detail.');
@@ -1052,7 +1047,7 @@
             const json = await res.json();
             if (json?.success === false) throw new Error(json?.message || json?.error || 'Failed to update measurement result.');
             await refreshActiveTab(false);
-            toggleModal(elements.editModal, false);
+            toggleAppModal(elements.editModal, false);
         } catch (error) {
             console.error(error);
             alert(error.message || 'Failed to update measurement result.');
@@ -1071,7 +1066,7 @@
             const json = await res.json();
             if (json?.success === false) throw new Error(json?.message || json?.error || 'Failed to delete measurement result.');
             await refreshActiveTab(false);
-            toggleModal(elements.editModal, false);
+            toggleAppModal(elements.editModal, false);
         } catch (error) {
             console.error(error);
             alert(error.message || 'Failed to delete measurement result.');
@@ -1120,23 +1115,23 @@
 
     elements.openAddBtn?.addEventListener('click', () => {
         resetAddForm();
-        toggleModal(elements.addModal, true);
+        toggleAppModal(elements.addModal, true);
     });
-    elements.closeAddBtn?.addEventListener('click', () => toggleModal(elements.addModal, false));
-    elements.cancelAddBtn?.addEventListener('click', () => toggleModal(elements.addModal, false));
+    elements.closeAddBtn?.addEventListener('click', () => toggleAppModal(elements.addModal, false));
+    elements.cancelAddBtn?.addEventListener('click', () => toggleAppModal(elements.addModal, false));
     elements.saveAddBtn?.addEventListener('click', createResult);
 
-    elements.closeEditBtn?.addEventListener('click', () => toggleModal(elements.editModal, false));
-    elements.cancelEditBtn?.addEventListener('click', () => toggleModal(elements.editModal, false));
+    elements.closeEditBtn?.addEventListener('click', () => toggleAppModal(elements.editModal, false));
+    elements.cancelEditBtn?.addEventListener('click', () => toggleAppModal(elements.editModal, false));
     elements.updateEditBtn?.addEventListener('click', updateResult);
     elements.deleteEditBtn?.addEventListener('click', () => deleteResult(editForm.id.value));
 
     elements.openFilterBtn?.addEventListener('click', () => {
         setFilterFormValues();
-        toggleModal(elements.filterModal, true);
+        toggleAppModal(elements.filterModal, true);
     });
-    elements.closeFilterBtn?.addEventListener('click', () => toggleModal(elements.filterModal, false));
-    elements.cancelFilterBtn?.addEventListener('click', () => toggleModal(elements.filterModal, false));
+    elements.closeFilterBtn?.addEventListener('click', () => toggleAppModal(elements.filterModal, false));
+    elements.cancelFilterBtn?.addEventListener('click', () => toggleAppModal(elements.filterModal, false));
     elements.applyFilterBtn?.addEventListener('click', () => {
         const values = readFilterFormValues();
         if (values.startDate && values.endDate && values.startDate > values.endDate) {
@@ -1144,7 +1139,7 @@
             return;
         }
         applyAdvancedFilters(values);
-        toggleModal(elements.filterModal, false);
+        toggleAppModal(elements.filterModal, false);
     });
     elements.resetFilterBtn?.addEventListener('click', () => {
         const defaults = createDefaultFilters();
@@ -1156,8 +1151,12 @@
             state.filters = defaults;
             updateFilterBadge();
         }
-        toggleModal(elements.filterModal, false);
+        toggleAppModal(elements.filterModal, false);
     });
+
+    registerModalDismiss(elements.addModal, () => toggleAppModal(elements.addModal, false));
+    registerModalDismiss(elements.editModal, () => toggleAppModal(elements.editModal, false));
+    registerModalDismiss(elements.filterModal, () => toggleAppModal(elements.filterModal, false));
 
     elements.refreshBtn?.addEventListener('click', () => {
         setLoadingState(state.activeTab);

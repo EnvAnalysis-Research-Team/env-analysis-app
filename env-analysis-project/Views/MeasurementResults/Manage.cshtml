@@ -276,19 +276,22 @@
 </div>
 
 <!-- Add Result Modal -->
-<div id="addResultModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5">
-    <div class="bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-4 h-fit">
-        <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+<div id="addResultModal"
+     class="app-modal fixed inset-0 bg-black bg-opacity-40 items-start justify-center z-50 p-4 pt-16 transition-all duration-200"
+     aria-hidden="true">
+    <div id="addResultModalPanel"
+         class="app-modal__panel app-modal__panel--lg bg-white rounded-md shadow-lg w-full max-w-3xl p-5 space-y-5 h-fit">
+        <div class="flex justify-between items-start border-b border-gray-200 pb-3">
             <div>
                 <h2 class="text-sm font-semibold text-gray-700">Add Measurement Result</h2>
-                <p class="text-[11px] text-gray-500">Record a new reading for water or air.</p>
+                <p class="text-xs text-gray-500">Record a new reading for water or air.</p>
             </div>
-            <button type="button" id="closeAddResultBtn" class="text-gray-400 hover:text-gray-600">
+            <button type="button" id="closeAddResultBtn" class="text-gray-500 hover:text-gray-700">
                 <i class="bi bi-x-lg text-xs"></i>
             </button>
         </div>
 
-        <div class="space-y-3 text-xs" id="addResultContent">
+        <div class="space-y-4 text-xs" id="addResultContent">
             <div>
                 <label class="block font-medium text-gray-700 mb-1">Measurement Type</label>
                 <div class="flex items-center gap-4">
@@ -305,31 +308,37 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Emission Source</label>
-                    <select id="addResultSource" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
+                    <select id="addResultSource"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Parameter</label>
-                    <select id="addResultParameter" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
+                    <select id="addResultParameter"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Value</label>
-                    <input type="number" step="0.0001" id="addResultValue" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    <input type="number" step="0.0001" id="addResultValue"
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Unit</label>
-                    <input type="text" id="addResultUnit" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    <input type="text" id="addResultUnit"
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Measurement Date</label>
-                    <input type="datetime-local" id="addResultDate" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    <input type="datetime-local" id="addResultDate"
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Status</label>
-                    <select id="addResultStatus" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <select id="addResultStatus"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
                         <option value="Approved">Approved</option>
                         <option value="Pending">Pending</option>
                     </select>
@@ -338,36 +347,42 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Approved At</label>
-                    <input type="datetime-local" id="addResultApprovedAt" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    <input type="datetime-local" id="addResultApprovedAt"
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Remark</label>
-                    <textarea id="addResultRemark" rows="3" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                    <textarea id="addResultRemark" rows="3"
+                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
             </div>
         </div>
 
-        <div class="flex justify-end gap-2 pt-2">
-            <button type="button" id="cancelAddResultBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+        <div class="flex justify-end space-x-2 pt-3 border-t border-gray-100">
+            <button type="button" id="cancelAddResultBtn"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                 Cancel
             </button>
-            <button type="button" id="saveResultBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
+            <button type="button" id="saveResultBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
                 <i class="bi bi-save text-[11px]"></i>
                 Save Result
             </button>
         </div>
     </div>
 </div>
-
 <!-- Filter Results Modal -->
-<div id="resultsFilterModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5">
-    <div class="bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-4 h-fit">
-        <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+<div id="resultsFilterModal"
+     class="app-modal fixed inset-0 bg-black bg-opacity-40 items-start justify-center z-50 p-4 pt-16 transition-all duration-200"
+     aria-hidden="true">
+    <div id="resultsFilterModalPanel"
+         class="app-modal__panel app-modal__panel--md bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-5 h-fit">
+        <div class="flex justify-between items-start border-b border-gray-200 pb-3">
             <div>
                 <h2 class="text-sm font-semibold text-gray-700">Filter Measurement Data</h2>
-                <p class="text-[11px] text-gray-500">Narrow results by source, parameter, status, or time range.</p>
+                <p class="text-xs text-gray-500">Narrow results by source, parameter, status, or time range.</p>
             </div>
-            <button type="button" id="closeResultsFilterBtn" class="text-gray-400 hover:text-gray-600">
+            <button type="button" id="closeResultsFilterBtn" class="text-gray-500 hover:text-gray-700">
                 <i class="bi bi-x-lg text-xs"></i>
             </button>
         </div>
@@ -375,13 +390,15 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Emission Source</label>
-                    <select id="filterSourceSelect" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <select id="filterSourceSelect"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                         <option value="">All sources</option>
                     </select>
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Parameter</label>
-                    <select id="filterParameterSelect" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <select id="filterParameterSelect"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                         <option value="">All parameters</option>
                     </select>
                 </div>
@@ -389,7 +406,8 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Status</label>
-                    <select id="filterStatusSelect" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <select id="filterStatusSelect"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                         <option value="">All statuses</option>
                         <option value="approved">Approved</option>
                         <option value="pending">Pending</option>
@@ -399,27 +417,32 @@
                     <label class="block font-medium text-gray-700 mb-1">Measurement Date</label>
                     <div class="grid grid-cols-1 gap-2">
                         <div class="space-y-1">
-                            <span class="text-[11px] text-gray-500 block">From</span>
-                            <input type="date" id="filterStartDate" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            <span class="text-xs text-gray-500 block">From</span>
+                            <input type="date" id="filterStartDate"
+                                   class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                         </div>
                         <div class="space-y-1">
-                            <span class="text-[11px] text-gray-500 block">To</span>
-                            <input type="date" id="filterEndDate" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                            <span class="text-xs text-gray-500 block">To</span>
+                            <input type="date" id="filterEndDate"
+                                   class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="flex justify-between items-center pt-2">
-            <button type="button" id="resetResultsFilterBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
+        <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+            <button type="button" id="resetResultsFilterBtn"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
                 <i class="bi bi-arrow-counterclockwise text-[11px]"></i>
                 Clear Filters
             </button>
-            <div class="flex gap-2">
-                <button type="button" id="cancelResultsFilterBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+            <div class="flex space-x-2">
+                <button type="button" id="cancelResultsFilterBtn"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                     Cancel
                 </button>
-                <button type="button" id="applyResultsFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
+                <button type="button" id="applyResultsFilterBtn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
                     <i class="bi bi-sliders text-[11px]"></i>
                     Apply Filters
                 </button>
@@ -429,21 +452,23 @@
 </div>
 
 <!-- Edit Result Modal -->
-<div id="editResultModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-start justify-center z-50 p-4 pt-16 transition-all duration-200 opacity-0 -translate-y-5">
-    <div class="bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-4 h-fit">
-        <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+<div id="editResultModal"
+     class="app-modal fixed inset-0 bg-black bg-opacity-40 items-start justify-center z-50 p-4 pt-16 transition-all duration-200"
+     aria-hidden="true">
+    <div class="app-modal__panel app-modal__panel--lg bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-5 h-fit">
+        <div class="flex justify-between items-start border-b border-gray-200 pb-3">
             <div>
-                <h2 class="text-sm font-semibold text-gray-700">Update Measurement Result</h2>
-                <p class="text-[11px] text-gray-500">Adjust values, status, or remarks.</p>
+                <h2 class="text-sm font-semibold text-gray-700">Edit Measurement Result</h2>
+                <p class="text-xs text-gray-500">Update measurements, remarks, or approval status.</p>
             </div>
-            <button type="button" id="closeEditResultBtn" class="text-gray-400 hover:text-gray-600">
+            <button type="button" id="closeEditResultBtn" class="text-gray-500 hover:text-gray-700">
                 <i class="bi bi-x-lg text-xs"></i>
             </button>
         </div>
 
         <input type="hidden" id="editResultId" />
 
-        <div class="space-y-3 text-xs" id="editResultContent">
+        <div class="space-y-4 text-xs">
             <div>
                 <label class="block font-medium text-gray-700 mb-1">Measurement Type</label>
                 <div class="flex items-center gap-4">
@@ -457,78 +482,100 @@
                     </label>
                 </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Emission Source</label>
-                    <select id="editResultSource" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
+                    <select id="editResultSource"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    </select>
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Parameter</label>
-                    <select id="editResultParameter" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
+                    <select id="editResultParameter"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    </select>
                 </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Value</label>
-                    <input type="number" step="0.0001" id="editResultValue" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    <input type="number" step="0.0001" id="editResultValue"
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Unit</label>
-                    <input type="text" id="editResultUnit" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    <input type="text" id="editResultUnit"
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Measurement Date</label>
-                    <input type="datetime-local"
-                           id="editResultDate"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-gray-100 text-gray-600 cursor-not-allowed"
-                           readonly
-                           tabindex="-1" />
-                    <p class="text-[11px] text-gray-500 mt-1">Timestamp locked after creation.</p>
+                    <input type="datetime-local" id="editResultDate"
+                           readonly tabindex="-1"
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-gray-100 text-gray-600 cursor-not-allowed" />
+                    <p class="text-xs text-gray-500 mt-1">
+                        Timestamp locked after creation.
+                    </p>
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Status</label>
-                    <select id="editResultStatus" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <select id="editResultStatus"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
                         <option value="Approved">Approved</option>
                         <option value="Pending">Pending</option>
                     </select>
                 </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Approved At</label>
-                    <input type="datetime-local"
-                           id="editResultApprovedAt"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-gray-100 text-gray-600 cursor-not-allowed"
-                           readonly
-                           tabindex="-1" />
-                    <p class="text-[11px] text-gray-500 mt-1">Auto-managed when approval status changes.</p>
+                    <input type="datetime-local" id="editResultApprovedAt"
+                           readonly tabindex="-1"
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-gray-100 text-gray-600 cursor-not-allowed" />
+                    <p class="text-xs text-gray-500 mt-1">
+                        Auto-managed when approval status changes.
+                    </p>
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Remark</label>
-                    <textarea id="editResultRemark" rows="3" class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                    <textarea id="editResultRemark" rows="3"
+                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
             </div>
         </div>
 
-        <div class="flex justify-between items-center pt-2">
-            <button type="button" id="deleteResultBtn" class="text-xs text-red-600 hover:text-red-700 inline-flex items-center gap-1">
-                <i class="bi bi-trash-fill"></i>
+        <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+            <button type="button" id="deleteResultBtn"
+                    class="text-xs text-red-600 hover:text-red-700 inline-flex items-center gap-1">
+                <i class="bi bi-trash-fill text-[11px]"></i>
                 Delete Result
             </button>
-            <div class="flex gap-2">
-                <button type="button" id="cancelEditResultBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+
+            <div class="flex space-x-2">
+                <button type="button" id="cancelEditResultBtn"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                     Close
                 </button>
-                <button type="button" id="updateResultBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
-                    <i class="bi bi-save"></i>
+                <button type="button" id="updateResultBtn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
+                    <i class="bi bi-save text-[11px]"></i>
                     Save changes
                 </button>
             </div>
         </div>
+
     </div>
 </div>
+
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/modal-effects.css" asp-append-version="true" />
+}
 
 @section Scripts {
     <script>
