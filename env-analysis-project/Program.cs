@@ -1,9 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using env_analysis_project.Data;
-using env_analysis_project.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using env_analysis_project.Data;
+using env_analysis_project.Models;
+using env_analysis_project.Options;
+using env_analysis_project.Security;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,26 +26,105 @@ builder.Services.AddDbContext<env_analysis_projectContext>(options =>
 // ======================================
 // Cấu hình Identity
 // ======================================
-// Nếu bạn đã cài package `Microsoft.AspNetCore.Identity.UI`, có thể dùng AddDefaultIdentity.
-// Nếu bạn tự làm UI đăng nhập, chỉ cần AddIdentity (như bên dưới).
-
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    // Cấu hình các tùy chọn đăng nhập
     options.SignIn.RequireConfirmedAccount = false;
-    options.Password.RequireDigit = true;
+    options.Password.RequireDigit = false;
     options.Password.RequireUppercase = false;
-    options.Password.RequireLowercase = true;
+    options.Password.RequireLowercase = false;
     options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 6;
+    options.Password.RequiredLength = 8;
 })
 .AddEntityFrameworkStores<env_analysis_projectContext>()
 .AddDefaultTokenProviders();
 
 // ======================================
+// Cấu hình JWT
+// ======================================
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
+    ?? throw new InvalidOperationException("Jwt configuration is missing.");
+
+if (string.IsNullOrWhiteSpace(jwtOptions.Key))
+{
+    throw new InvalidOperationException("Jwt:Key is required.");
+}
+
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key));
+
+builder.Services
+    .AddAuthorization()
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = true;
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = signingKey,
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Cookies.TryGetValue(JwtDefaults.AccessTokenCookieName, out var token))
+                {
+                    context.Token = token;
+                }
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                context.HandleResponse();
+
+                var isAjax = string.Equals(
+                    context.Request.Headers["X-Requested-With"],
+                    "XMLHttpRequest",
+                    StringComparison.OrdinalIgnoreCase);
+
+                if (isAjax)
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return context.Response.WriteAsync("Unauthorized");
+                }
+
+                context.Response.Redirect("/Identity/Account/Login");
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+// ======================================
 // Thêm MVC Controller + View
 // ======================================
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    var policy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .Build();
+    options.Filters.Add(new AuthorizeFilter(policy));
+});
+
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Login");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ForgotPassword");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ForgotPasswordConfirmation");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ResetPassword");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ResetPasswordConfirmation");
+});
 
 var app = builder.Build();
 
@@ -55,15 +141,14 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-
-// Quan trọng: phải có Authentication trước Authorization
+app.UseMiddleware<AccessTokenForwardingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
 // ======================================
 // Cấu hình Route
 // ======================================
-app.MapControllerRoute( 
+app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}"
 );
@@ -73,8 +158,10 @@ app.MapControllerRoute(
     pattern: "{controller=UserManagementController}/{action=Index}"
 );
 
+app.MapRazorPages();
 
 // ======================================
 // Chạy ứng dụng
 // ======================================
+await IdentityDataSeeder.SeedAsync(app);
 app.Run();

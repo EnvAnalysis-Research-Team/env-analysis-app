@@ -22,3 +22,5 @@ Thumbs.db
 node_modules/
 dist/
 .env
+env-analysis-project/appsettings*.json
+!env-analysis-project/appsettings.template.json

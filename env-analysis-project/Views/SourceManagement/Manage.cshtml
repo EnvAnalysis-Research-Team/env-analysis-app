@@ -5,81 +5,59 @@
     ViewData["Title"] = "Source Management";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <style>
-        #sourceMap .leaflet-pane,
-        #sourceMap .leaflet-control-container {
-            z-index: 0;
-        }
-    </style>
-}
-
 <div class="max-w-8xl mx-auto bg-white shadow-sm rounded-md p-6 space-y-6">
-    <!-- HEADER -->
-    <div class="flex flex-col md:flex-row justify-end md:items-center mb-4 gap-2">
-        <!-- Nút m? modal thêm Source Type -->
-        <button type="button" id="openAddTypeModalBtn"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-md transition">
-            + Add source type
-        </button>
-    </div>
-
-    <!-- TOP SECTION: MAP + SOURCE TYPE -->
-    <div class="grid grid-cols-8 gap-4" style="margin-top: 0 !important">
-        <!-- Map Widget -->
-        <div class="col-span-8 md:col-span-6 bg-gray-100 border border-gray-200 rounded-lg p-4">
-            <h2 class="text-sm font-semibold text-gray-700 mb-2">Map</h2>
-            <div id="sourceMap" class="w-full h-80 bg-gray-200 rounded-md overflow-hidden relative"></div>
-        </div>
-
-        <!-- Source Type Box (wider + table) -->
-        <div class="col-span-8 md:col-span-2 bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col">
-            <div class="flex items-center justify-between mb-3">
+    <div class="grid grid-cols-1 lg:grid-cols-8 gap-4">
+        <div class="col-span-1 lg:col-span-2 order-2 lg:order-1 bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <div>
                 <h2 class="text-sm font-semibold text-gray-700">Source Type</h2>
             </div>
+            <button type="button" id="openAddTypeModalBtn"
+                class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
+                <i class="bi bi-plus text-[9px]"></i>
+                Add
+            </button>
+        </div>
 
-            <div class="overflow-auto" style="max-height:380px;">
-                <div class="overflow-auto" style="max-height: 320px; overflow-x:auto;">
-                    <table id="sourceTypeTable" class="w-full text-xs text-left table-auto">
-                        <thead class="bg-gray-100 text-gray-700 sticky top-0">
-                            <tr>
-                                <th class="px-2 py-2">Type</th>
-                                <th class="px-2 py-2 text-center">Number</th>
+        <div class="overflow-auto" style="max-height:380px;">
+            <div class="overflow-auto" style="max-height: 320px; overflow-x:auto;">
+                <table id="sourceTypeTable" class="w-full text-xs text-left table-auto">
+                    <thead class="bg-gray-100 text-gray-700 sticky top-0">
+                        <tr>
+                            <th class="px-2 py-2">Type</th>
+                            <th class="px-2 py-2 text-center">Number</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sourceTypeTbody">
+                        @foreach (var type in ViewBag.SourceTypes ?? new List<dynamic>())
+                        {
+                            var id = type.SourceTypeID;
+                            var name = type.SourceTypeName;
+                            var count = type.Count;
+
+                            <tr class="type-row hover:bg-white cursor-pointer" data-id="@id" data-name="@name"
+                                data-count="@count">
+                                <td class="px-2 py-2 truncate" title="@name">@name</td>
+                                <td class="px-2 py-2 text-center font-medium">@count</td>
                             </tr>
-                        </thead>
-                        <tbody id="sourceTypeTbody">
-                            @foreach (var type in ViewBag.SourceTypes ?? new List<dynamic>())
-                            {
-                                var id = type.SourceTypeID;
-                                var name = type.SourceTypeName;
-                                var count = type.Count;
+                        }
 
-                                <tr class="type-row hover:bg-white cursor-pointer" data-id="@id" data-name="@name"
-                                    data-count="@count">
-                                    <td class="px-2 py-2 truncate" title="@name">@name</td>
-                                    <td class="px-2 py-2 text-center font-medium">@count</td>
-                                </tr>
-                            }
-
-                            @if ((ViewBag.SourceTypes == null) || (((IEnumerable<dynamic>)ViewBag.SourceTypes).Any() ==
-                                                        false))
-                            {
-                                <tr id="noSourceTypesRow">
-                                    <td colspan="2" class="px-2 py-3 text-center text-xs text-gray-400">No source types
-                                        found.</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                        @if ((ViewBag.SourceTypes == null) || (((IEnumerable<dynamic>)ViewBag.SourceTypes).Any() ==
+                                                    false))
+                        {
+                            <tr id="noSourceTypesRow">
+                                <td colspan="2" class="px-2 py-3 text-center text-xs text-gray-400">No source types
+                                    found.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
+        </div>
 
-    <!-- EMISSION SOURCE TABLE -->
-    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <!-- EMISSION SOURCE TABLE -->
+        <div class="col-span-1 lg:col-span-6 order-1 lg:order-2 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
             <h2 class="text-sm font-semibold text-gray-700">Emission Sources</h2>
             <div class="flex flex-wrap items-center gap-2 text-xs">
@@ -190,6 +168,7 @@
                 }
             </tbody>
         </table>
+        </div>
     </div>
 
     <!-- MODAL: Add Source Type -->
@@ -466,8 +445,6 @@
 </div>
 
 @section Scripts {
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         window.sourceManagementConfig = {
             deleteUrl: '@Url.Action("Delete", "EmissionSources")'

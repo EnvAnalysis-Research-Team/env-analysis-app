@@ -1,4 +1,31 @@
-﻿<!DOCTYPE html>
+@using Microsoft.AspNetCore.Identity
+@using env_analysis_project.Models
+@using env_analysis_project.Security
+@using System.Text.Json
+@inject UserManager<ApplicationUser> UserManager
+@{
+    var isUserAuthenticated = User.Identity?.IsAuthenticated ?? false;
+    var currentUserName = User.Identity?.Name ?? "Account";
+    var accessToken = Context.Request.Cookies[JwtDefaults.AccessTokenCookieName];
+
+    if (isUserAuthenticated)
+    {
+        var fullNameClaim = User.FindFirst("fullName")?.Value;
+        if (!string.IsNullOrWhiteSpace(fullNameClaim))
+        {
+            currentUserName = fullNameClaim;
+        }
+        else
+        {
+            var currentUser = await UserManager.GetUserAsync(User);
+            if (!string.IsNullOrWhiteSpace(currentUser?.FullName))
+            {
+                currentUserName = currentUser.FullName!;
+            }
+        }
+    }
+}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -28,6 +55,13 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <script>
+        window.authState = {
+            accessToken: @Html.Raw(JsonSerializer.Serialize(accessToken ?? string.Empty))
+        };
+    </script>
+    <script src="~/js/jwt-fetch.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -87,9 +121,44 @@
             </ul>
 
             <!-- Icon user bên phải -->
-            <div class="text-gray-500 cursor-pointer ml-auto text-xs">
-                <i class="bi bi-person-circle text-xl hover:black"></i>
-            </div>
+            @if (isUserAuthenticated)
+            {
+                <div class="ml-auto relative text-sm text-gray-700" x-data="{ userMenuOpen: false }" x-cloak>
+                    <button type="button"
+                            class="flex items-center gap-2 px-3 py-1.5 transition"
+                            @@click="userMenuOpen = !userMenuOpen"
+                            @@click.away="userMenuOpen = false"
+                            @@keydown.escape.prevent.stop="userMenuOpen = false">
+                        <span class="font-semibold text-gray-800">@currentUserName</span>
+                        <i class="bi" :class="userMenuOpen ? 'bi-caret-up-fill text-[10px] mt-[2px]' : 'bi-caret-down-fill text-[10px] mt-[2px]'"></i>
+                    </button>
+                    <div x-show="userMenuOpen"
+                         x-transition
+                         class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                        <div class="px-4 py-2 text-[11px] text-gray-500 border-b border-gray-100">
+                            Signed in as
+                            <div class="font-semibold text-gray-800 text-sm truncate">@currentUserName</div>
+                        </div>
+                        <form method="post"
+                              asp-area="Identity"
+                              asp-page="/Account/Logout"
+                              asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })"
+                              class="px-4 py-2">
+                            <button type="submit"
+                                    class="w-full text-left text-sm text-red-600 hover:text-red-700 font-semibold">
+                                Logout
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="ml-auto flex items-center gap-4 text-xs font-semibold text-gray-600">
+                    <a asp-area="Identity" asp-page="/Account/Login" class="hover:text-blue-600 transition">Login</a>
+                    <a asp-area="Identity" asp-page="/Account/Register" class="hover:text-blue-600 transition">Register</a>
+                </div>
+            }
 
         </nav>
     </header>

@@ -4,8 +4,8 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using env_analysis_project.Models;
+using env_analysis_project.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -27,6 +27,7 @@ namespace env_analysis_project.Areas.Identity.Pages.Account
         public async Task<IActionResult> OnPost(string returnUrl = null)
         {
             await _signInManager.SignOutAsync();
+            Response.Cookies.Delete(JwtDefaults.AccessTokenCookieName);
             _logger.LogInformation("User logged out.");
             if (returnUrl != null)
             {

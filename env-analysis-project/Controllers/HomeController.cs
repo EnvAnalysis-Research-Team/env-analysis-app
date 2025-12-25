@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using env_analysis_project.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace env_analysis_project.Controllers
@@ -18,6 +19,7 @@ namespace env_analysis_project.Controllers
             return View();
         }
 
+        [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
