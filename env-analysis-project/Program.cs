@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -105,6 +106,8 @@ builder.Services
             }
         };
     });
+
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, FriendlyAuthorizationMiddlewareResultHandler>();
 
 // ======================================
 // Thêm MVC Controller + View

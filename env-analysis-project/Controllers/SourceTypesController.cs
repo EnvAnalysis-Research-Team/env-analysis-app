@@ -22,7 +22,7 @@ namespace env_analysis_project.Controllers
         // ========== Views ==========
         public async Task<IActionResult> Index()
         {
-            var sourceTypes = await _context.SourceType
+            var sourceTypes = await ActiveSourceTypes()
                 .Select(st => new SourceTypeDto
                 {
                     SourceTypeID = st.SourceTypeID,
@@ -31,7 +31,7 @@ namespace env_analysis_project.Controllers
                     IsActive = st.IsActive,
                     CreatedAt = st.CreatedAt,
                     UpdatedAt = st.UpdatedAt,
-                    EmissionSourceCount = _context.EmissionSource.Count(es => es.SourceTypeID == st.SourceTypeID)
+                    EmissionSourceCount = _context.EmissionSource.Count(es => es.SourceTypeID == st.SourceTypeID && !es.IsDeleted)
                 })
                 .ToListAsync();
 
@@ -48,7 +48,7 @@ namespace env_analysis_project.Controllers
                 return NotFound();
             }
 
-            var sourceType = await _context.SourceType.FirstOrDefaultAsync(m => m.SourceTypeID == id);
+            var sourceType = await ActiveSourceTypes().FirstOrDefaultAsync(m => m.SourceTypeID == id);
             if (sourceType == null)
             {
                 return NotFound();
@@ -61,7 +61,7 @@ namespace env_analysis_project.Controllers
         {
             if (id == null) return NotFound();
 
-            var sourceType = await _context.SourceType.FirstOrDefaultAsync(m => m.SourceTypeID == id);
+            var sourceType = await ActiveSourceTypes().FirstOrDefaultAsync(m => m.SourceTypeID == id);
             if (sourceType == null) return NotFound();
 
             return View(sourceType);
@@ -71,7 +71,7 @@ namespace env_analysis_project.Controllers
         [HttpGet]
         public async Task<IActionResult> GetList()
         {
-            var sourceTypes = await _context.SourceType
+            var sourceTypes = await ActiveSourceTypes()
                 .Select(st => new SourceTypeDto
                 {
                     SourceTypeID = st.SourceTypeID,
@@ -80,7 +80,7 @@ namespace env_analysis_project.Controllers
                     IsActive = st.IsActive,
                     CreatedAt = st.CreatedAt,
                     UpdatedAt = st.UpdatedAt,
-                    EmissionSourceCount = _context.EmissionSource.Count(es => es.SourceTypeID == st.SourceTypeID)
+                    EmissionSourceCount = _context.EmissionSource.Count(es => es.SourceTypeID == st.SourceTypeID && !es.IsDeleted)
                 })
                 .ToListAsync();
 
@@ -90,7 +90,7 @@ namespace env_analysis_project.Controllers
         [HttpGet]
         public async Task<IActionResult> Get(int id)
         {
-            var dto = await _context.SourceType
+            var dto = await ActiveSourceTypes()
                 .Where(s => s.SourceTypeID == id)
                 .Select(s => new SourceTypeDto
                 {
@@ -100,7 +100,7 @@ namespace env_analysis_project.Controllers
                     IsActive = s.IsActive,
                     CreatedAt = s.CreatedAt,
                     UpdatedAt = s.UpdatedAt,
-                    EmissionSourceCount = _context.EmissionSource.Count(es => es.SourceTypeID == s.SourceTypeID)
+                    EmissionSourceCount = _context.EmissionSource.Count(es => es.SourceTypeID == s.SourceTypeID && !es.IsDeleted)
                 })
                 .FirstOrDefaultAsync();
 
@@ -174,7 +174,7 @@ namespace env_analysis_project.Controllers
             }
 
             var existing = await _context.SourceType.FindAsync(id);
-            if (existing == null)
+            if (existing == null || existing.IsDeleted)
             {
                 return NotFound(ApiResponse.Fail<SourceTypeDto>("Source type not found."));
             }
@@ -195,9 +195,10 @@ namespace env_analysis_project.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var sourceType = await _context.SourceType.FindAsync(id);
-            if (sourceType != null)
+            if (sourceType != null && !sourceType.IsDeleted)
             {
-                _context.SourceType.Remove(sourceType);
+                sourceType.IsDeleted = true;
+                sourceType.UpdatedAt = DateTime.Now;
                 await _context.SaveChangesAsync();
             }
 
@@ -238,8 +239,11 @@ namespace env_analysis_project.Controllers
             };
         }
 
+        private IQueryable<SourceType> ActiveSourceTypes() =>
+            _context.SourceType.Where(st => !st.IsDeleted);
+
         private bool SourceTypeExists(int id) =>
-            _context.SourceType.Any(e => e.SourceTypeID == id);
+            ActiveSourceTypes().Any(e => e.SourceTypeID == id);
 
         public sealed class SourceTypeDto
         {

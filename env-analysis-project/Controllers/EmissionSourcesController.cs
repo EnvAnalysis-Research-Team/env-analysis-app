@@ -23,12 +23,13 @@ namespace env_analysis_project.Controllers
         public async Task<IActionResult> Index()
         {
             // Load emission sources and their types
-            var emissionSources = await _context.EmissionSource
+            var emissionSources = await ActiveEmissionSources()
                 .Include(e => e.SourceType)
                 .OrderBy(e => e.SourceName)
                 .ToListAsync();
 
             ViewBag.SourceTypes = await _context.SourceType
+                .Where(t => !t.IsDeleted)
                 .OrderBy(t => t.SourceTypeName)
                 .ToListAsync();
 
@@ -41,7 +42,7 @@ namespace env_analysis_project.Controllers
         [HttpGet]
         public async Task<IActionResult> Detail(int id)
         {
-            var source = await _context.EmissionSource
+            var source = await ActiveEmissionSources()
                 .Include(e => e.SourceType)
                 .FirstOrDefaultAsync(e => e.EmissionSourceID == id);
 
@@ -90,7 +91,7 @@ namespace env_analysis_project.Controllers
                 return BadRequest(ApiResponse.Fail<EmissionSourceResponse>("Invalid emission source identifier."));
 
             var existing = await _context.EmissionSource.FindAsync(id);
-            if (existing == null)
+            if (existing == null || existing.IsDeleted)
                 return NotFound(ApiResponse.Fail<EmissionSourceResponse>("Emission source not found."));
 
             var validationErrors = EmissionSourceValidator.Validate(model).ToList();
@@ -132,24 +133,56 @@ namespace env_analysis_project.Controllers
             }
 
             var emissionSource = await _context.EmissionSource.FindAsync(request.Id);
+            if (emissionSource == null || emissionSource.IsDeleted)
+            {
+                return NotFound(ApiResponse.Fail<object?>("Emission source not found."));
+            }
+
+            emissionSource.IsDeleted = true;
+            emissionSource.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Ok(ApiResponse.Success(new { request.Id }, "Emission source deleted successfully!"));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore([FromBody] DeleteEmissionSourceRequest request)
+        {
+            var validationErrors = EmissionSourceValidator.ValidateDelete(request).ToList();
+            if (validationErrors.Count > 0)
+            {
+                return BadRequest(ApiResponse.Fail<object?>("Invalid emission source identifier.", validationErrors));
+            }
+
+            var emissionSource = await _context.EmissionSource.FindAsync(request.Id);
             if (emissionSource == null)
             {
                 return NotFound(ApiResponse.Fail<object?>("Emission source not found."));
             }
 
-            _context.EmissionSource.Remove(emissionSource);
+            if (!emissionSource.IsDeleted)
+            {
+                return BadRequest(ApiResponse.Fail<object?>("Emission source is already active."));
+            }
+
+            emissionSource.IsDeleted = false;
+            emissionSource.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
 
-            return Ok(ApiResponse.Success(new { request.Id }, "Emission source deleted successfully!"));
+            return Ok(ApiResponse.Success(new { request.Id }, "Emission source restored successfully!"));
         }
 
 
         // =============================
         //  HELPER
         // =============================
+        private IQueryable<EmissionSource> ActiveEmissionSources() =>
+            _context.EmissionSource.Where(e => !e.IsDeleted);
+
         private bool EmissionSourceExists(int id)
         {
-            return _context.EmissionSource.Any(e => e.EmissionSourceID == id);
+            return ActiveEmissionSources().Any(e => e.EmissionSourceID == id);
         }
 
         private IReadOnlyCollection<string> GetModelErrors()

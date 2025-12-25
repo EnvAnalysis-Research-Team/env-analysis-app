@@ -386,6 +386,28 @@
         return envelope;
     };
 
+    const requestEmissionRestore = async (id) => {
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+        const token = getAntiForgeryToken();
+        if (token) {
+            headers['RequestVerificationToken'] = token;
+        }
+        const res = await fetch(window.sourceManagementConfig?.restoreUrl || '/EmissionSources/Restore', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers,
+            body: JSON.stringify({ id: Number(id) })
+        });
+        const envelope = await res.json().catch(() => ({}));
+        if (!res.ok || envelope?.success === false) {
+            throw new Error(envelope?.message || envelope?.error || 'Failed to restore emission source.');
+        }
+        return envelope;
+    };
+
     const attachEmissionSourceEvents = () => {
         document.querySelectorAll('.delete-source-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -395,8 +417,25 @@
                 btn.disabled = true;
                 try {
                     await requestEmissionDelete(id);
-                    btn.closest('tr')?.remove();
                     alert('Emission source deleted successfully.');
+                    window.location.reload();
+                } catch (error) {
+                    alert(error.message);
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        document.querySelectorAll('.restore-source-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                if (!id) return;
+                btn.disabled = true;
+                try {
+                    await requestEmissionRestore(id);
+                    alert('Emission source restored successfully.');
+                    window.location.reload();
                 } catch (error) {
                     alert(error.message);
                 } finally {

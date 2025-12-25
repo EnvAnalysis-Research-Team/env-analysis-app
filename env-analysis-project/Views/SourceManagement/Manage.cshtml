@@ -107,14 +107,15 @@
                     foreach (var src in Model)
                     {
                         var statusTag = src.IsActive ? "active" : "inactive";
-                        <tr class="hover:bg-gray-50 transition emission-source-row"
+                        var rowClasses = $"emission-source-row {(src.IsDeleted ? "bg-red-200 opacity-80" : "hover:bg-gray-50 transition")}";
+                        <tr class="@rowClasses"
                             data-lat="@src.Latitude?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                             data-lng="@src.Longitude?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                             data-name="@src.SourceName"
                             data-code="@src.SourceCode"
                             data-location="@src.Location"
                             data-type="@src.SourceType?.SourceTypeName"
-                            data-status="@statusTag">
+                            data-status="@(src.IsDeleted ? "deleted" : statusTag)">
                             <td class="px-3 py-2">@src.SourceName</td>
                             <td class="px-3 py-2">@src.SourceCode</td>
                             <td class="px-3 py-2">@src.Location</td>
@@ -122,7 +123,11 @@
                             <td class="px-3 py-2">@src.Longitude</td>
                             <td class="px-3 py-2">@src.SourceType?.SourceTypeName</td>
                             <td class="px-3 py-2 text-center">
-                                @if (src.IsActive)
+                                @if (src.IsDeleted)
+                                {
+                                    <span class="text-red-600 font-medium">Deleted</span>
+                                }
+                                else if (src.IsActive)
                                 {
                                     <span class="text-green-600 font-medium">Active</span>
                                 }
@@ -133,20 +138,29 @@
                             </td>
                             <td class="px-3 py-2 text-center space-x-2">
                                 <div class="flex items-center justify-center gap-2">
-                                    <!-- Nút xem chi ti?t -->
-                                    <button type="button"
-                                        class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition"
-                                        title="View Details" data-id="@src.EmissionSourceID">
-                                        <i class="bi bi-eye text-[10px]"></i>
-                                    </button>
-
-                                    <!-- Nút xóa -->
-                                    <button type="button"
-                                        class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition delete-source-btn"
-                                        data-id="@src.EmissionSourceID" data-name="@src.SourceName"
-                                        title="Delete Emission Source">
-                                        <i class="bi bi-trash text-[10px]"></i>
-                                    </button>
+                                    @if (!src.IsDeleted)
+                                    {
+                                        <button type="button"
+                                            class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition"
+                                            title="View Details" data-id="@src.EmissionSourceID">
+                                            <i class="bi bi-eye text-[10px]"></i>
+                                        </button>
+                                        <button type="button"
+                                            class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition delete-source-btn"
+                                            data-id="@src.EmissionSourceID" data-name="@src.SourceName"
+                                            title="Delete Emission Source">
+                                            <i class="bi bi-trash text-[10px]"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button"
+                                            class="w-7 h-7 flex items-center justify-center border border-green-400 text-green-700 rounded-md hover:bg-green-50 transition restore-source-btn"
+                                            data-id="@src.EmissionSourceID" data-name="@src.SourceName"
+                                            title="Restore Emission Source">
+                                            <i class="bi bi-arrow-counterclockwise text-[10px]"></i>
+                                        </button>
+                                    }
                                 </div>
                             </td>
 
@@ -447,7 +461,8 @@
 @section Scripts {
     <script>
         window.sourceManagementConfig = {
-            deleteUrl: '@Url.Action("Delete", "EmissionSources")'
+            deleteUrl: '@Url.Action("Delete", "EmissionSources")',
+            restoreUrl: '@Url.Action("Restore", "EmissionSources")'
         };
     </script>
     <script src="~/js/source-management.js" asp-append-version="true"></script>

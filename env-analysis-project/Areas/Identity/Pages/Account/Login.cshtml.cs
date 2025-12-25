@@ -185,6 +185,7 @@ namespace env_analysis_project.Areas.Identity.Pages.Account
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim("scope", $"role:{role}"));
             }
 
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));

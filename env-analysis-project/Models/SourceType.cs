@@ -20,6 +20,8 @@ namespace env_analysis_project.Models
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        public bool IsDeleted { get; set; }
+
         // Quan hệ 1-n với EmissionSource
         // Make nullable and initialize to avoid model-binding validation error
         public ICollection<EmissionSource>? EmissionSources { get; set; } = new List<EmissionSource>();

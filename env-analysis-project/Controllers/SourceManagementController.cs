@@ -28,10 +28,12 @@ namespace env_analysis_project.Controllers
         {
             var sources = await _context.EmissionSource
                 .Include(e => e.SourceType)
-                .OrderBy(e => e.SourceName)
+                .OrderBy(e => e.IsDeleted)
+                .ThenBy(e => e.SourceName)
                 .ToListAsync();
 
             var sourceTypes = await _context.SourceType
+                .Where(st => !st.IsDeleted)
                 .Select(st => new
                 {
                     st.SourceTypeID,
@@ -40,7 +42,7 @@ namespace env_analysis_project.Controllers
                     st.IsActive,
                     st.CreatedAt,
                     st.UpdatedAt,
-                    Count = _context.EmissionSource.Count(es => es.SourceTypeID == st.SourceTypeID)
+                    Count = _context.EmissionSource.Count(es => es.SourceTypeID == st.SourceTypeID && !es.IsDeleted)
                 })
                 .ToListAsync();
 
@@ -51,6 +53,7 @@ namespace env_analysis_project.Controllers
         public async Task<IActionResult> ExportCsv()
         {
             var sources = await _context.EmissionSource
+                .Where(e => !e.IsDeleted)
                 .Include(e => e.SourceType)
                 .OrderBy(e => e.SourceName)
                 .ToListAsync();

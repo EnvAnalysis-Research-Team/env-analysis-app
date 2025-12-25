@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using env_analysis_project.Models;
@@ -10,6 +11,7 @@ using env_analysis_project.Validators;
 
 namespace env_analysis_project.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class UserManagementController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;

@@ -25,7 +25,11 @@ namespace env_analysis_project.Controllers
         // GET: Parameters
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Parameter.ToListAsync());
+            var parameters = await _context.Parameter
+                .Where(p => !p.IsDeleted)
+                .ToListAsync();
+
+            return View(parameters);
         }
 
         // GET: Parameters/Manage
@@ -39,6 +43,7 @@ namespace env_analysis_project.Controllers
         public async Task<IActionResult> ExportCsv()
         {
             var parameters = await _context.Parameter
+                .Where(p => !p.IsDeleted)
                 .OrderBy(p => p.ParameterName)
                 .ToListAsync();
 
@@ -73,7 +78,7 @@ namespace env_analysis_project.Controllers
             }
 
             var parameter = await _context.Parameter
-                .FirstOrDefaultAsync(m => m.ParameterCode == id);
+                .FirstOrDefaultAsync(m => m.ParameterCode == id && !m.IsDeleted);
             if (parameter == null)
             {
                 return NotFound();
@@ -116,6 +121,7 @@ namespace env_analysis_project.Controllers
             parameter.Description = string.IsNullOrWhiteSpace(parameter.Description) ? null : parameter.Description.Trim();
             parameter.CreatedAt = DateTime.UtcNow;
             parameter.UpdatedAt = DateTime.UtcNow;
+            parameter.IsDeleted = false;
 
             _context.Add(parameter);
             await _context.SaveChangesAsync();
@@ -198,7 +204,7 @@ namespace env_analysis_project.Controllers
             }
 
             var parameter = await _context.Parameter
-                .FirstOrDefaultAsync(m => m.ParameterCode == id);
+                .FirstOrDefaultAsync(m => m.ParameterCode == id && !m.IsDeleted);
             if (parameter == null)
             {
                 return NotFound();
@@ -213,12 +219,13 @@ namespace env_analysis_project.Controllers
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var parameter = await _context.Parameter.FindAsync(id);
-            if (parameter != null)
+            if (parameter != null && !parameter.IsDeleted)
             {
-                _context.Parameter.Remove(parameter);
+                parameter.IsDeleted = true;
+                parameter.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
@@ -229,7 +236,8 @@ namespace env_analysis_project.Controllers
         public async Task<IActionResult> ListData()
         {
             var parameters = await _context.Parameter
-                .OrderBy(p => p.ParameterName)
+                .OrderBy(p => p.IsDeleted)
+                .ThenBy(p => p.ParameterName)
                 .Select(p => ToDto(p))
                 .ToListAsync();
 
@@ -246,7 +254,7 @@ namespace env_analysis_project.Controllers
 
             var code = id.Trim();
             var parameter = await _context.Parameter.FindAsync(code);
-            if (parameter == null)
+            if (parameter == null || parameter.IsDeleted)
             {
                 return NotFound(ApiResponse.Fail<ParameterDto>("Parameter not found."));
             }
@@ -277,7 +285,8 @@ namespace env_analysis_project.Controllers
                 StandardValue = dto.StandardValue,
                 Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
             };
 
             _context.Parameter.Add(entity);
@@ -296,7 +305,7 @@ namespace env_analysis_project.Controllers
 
             var code = id.Trim();
             var parameter = await _context.Parameter.FindAsync(code);
-            if (parameter == null)
+            if (parameter == null || parameter.IsDeleted)
             {
                 return NotFound(ApiResponse.Fail<ParameterDto>("Parameter not found."));
             }
@@ -333,10 +342,43 @@ namespace env_analysis_project.Controllers
                 return NotFound(ApiResponse.Fail<object?>("Parameter not found."));
             }
 
-            _context.Parameter.Remove(parameter);
+            if (parameter.IsDeleted)
+            {
+                return BadRequest(ApiResponse.Fail<object?>("Parameter is already deleted."));
+            }
+
+            parameter.IsDeleted = true;
+            parameter.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return Ok(ApiResponse.Success<object?>(null, "Parameter deleted successfully."));
+            return Ok(ApiResponse.Success(ToDto(parameter), "Parameter deleted successfully."));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RestoreAjax([FromBody] ParameterDto request)
+        {
+            var validationErrors = ParameterValidator.ValidateIdentifier(request?.ParameterCode).ToList();
+            if (validationErrors.Count > 0)
+            {
+                return BadRequest(ApiResponse.Fail<object?>(validationErrors[0], validationErrors));
+            }
+
+            var parameter = await _context.Parameter.FindAsync(request!.ParameterCode.Trim());
+            if (parameter == null)
+            {
+                return NotFound(ApiResponse.Fail<object?>("Parameter not found."));
+            }
+
+            if (!parameter.IsDeleted)
+            {
+                return BadRequest(ApiResponse.Fail<object?>("Parameter is already active."));
+            }
+
+            parameter.IsDeleted = false;
+            parameter.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(ApiResponse.Success(ToDto(parameter), "Parameter restored successfully."));
         }
 
         private IReadOnlyCollection<string> GetModelErrors()
@@ -352,7 +394,7 @@ namespace env_analysis_project.Controllers
 
         private bool ParameterExists(string id)
         {
-            return _context.Parameter.Any(e => e.ParameterCode == id);
+            return _context.Parameter.Any(e => e.ParameterCode == id && !e.IsDeleted);
         }
 
         private static ParameterDto ToDto(Parameter parameter)
@@ -365,7 +407,8 @@ namespace env_analysis_project.Controllers
                 StandardValue = parameter.StandardValue,
                 Description = parameter.Description,
                 CreatedAt = parameter.CreatedAt,
-                UpdatedAt = parameter.UpdatedAt
+                UpdatedAt = parameter.UpdatedAt,
+                IsDeleted = parameter.IsDeleted
             };
         }
 
@@ -378,6 +421,7 @@ namespace env_analysis_project.Controllers
             public string? Description { get; set; }
             public DateTime? CreatedAt { get; set; }
             public DateTime? UpdatedAt { get; set; }
+            public bool IsDeleted { get; set; }
         }
 
         private static string EscapeCsv(string? value)

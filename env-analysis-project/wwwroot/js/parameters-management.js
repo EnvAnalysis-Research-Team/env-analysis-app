@@ -25,9 +25,25 @@
     const updateBtn = document.getElementById('updateParameterBtn');
     const deleteBtn = document.getElementById('deleteParameterBtn');
 
+    const paginationInfoEl = document.getElementById('parameterPaginationInfo');
+    const pageIndicatorEl = document.getElementById('parameterPageIndicator');
+    const pageSizeSelect = document.getElementById('parameterPageSizeSelect');
+    const prevPageBtn = document.getElementById('parameterPrevPage');
+    const nextPageBtn = document.getElementById('parameterNextPage');
+
     const state = {
         parameters: [],
-        filtered: []
+        filtered: [],
+        page: 1,
+        pageSize: parseInt(pageSizeSelect?.value || '10', 10)
+    };
+
+    const sortRows = (rows) => {
+        return [...rows].sort((a, b) => {
+            const deletedDiff = Number(a.isDeleted) - Number(b.isDeleted);
+            if (deletedDiff !== 0) return deletedDiff;
+            return (a.parameterName || '').localeCompare(b.parameterName || '');
+        });
     };
 
     const formatDate = (value) => {
@@ -84,12 +100,52 @@
     const renderRows = (rows) => {
         if (!tableBody) return;
         if (!rows.length) {
-            tableBody.innerHTML = '<tr><td colspan="8" class="px-3 py-6 text-center text-gray-400 text-sm">No parameters found.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-gray-400 text-sm">No parameters found.</td></tr>';
+            updatePaginationMeta(0, 0, 0);
             return;
         }
 
-        tableBody.innerHTML = rows.map(row => `
-            <tr class="hover:bg-gray-50 transition">
+        const ordered = sortRows(rows);
+        const totalItems = ordered.length;
+        const totalPages = Math.max(1, Math.ceil(totalItems / state.pageSize));
+        state.page = Math.min(state.page, totalPages);
+
+        const startIndex = (state.page - 1) * state.pageSize;
+        const pageItems = ordered.slice(startIndex, startIndex + state.pageSize);
+        if (!pageItems.length) {
+            tableBody.innerHTML = '<tr><td colspan="9" class="px-3 py-6 text-center text-gray-400 text-sm">No parameters found.</td></tr>';
+            updatePaginationMeta(totalItems, totalPages, state.page);
+            return;
+        }
+
+        tableBody.innerHTML = pageItems.map(row => {
+            const isDeleted = !!row.isDeleted;
+            const rowClasses = isDeleted ? 'bg-red-200/70 text-gray-700' : 'hover:bg-gray-50 transition';
+            const statusMarkup = isDeleted
+                ? '<span class="text-red-600 font-semibold uppercase text-[11px]">Deleted</span>'
+                : '<span class="text-green-600 font-semibold text-[11px]">Active</span>';
+            const actionButtons = isDeleted
+                ? `<button type="button"
+                           class="w-7 h-7 flex items-center justify-center border border-green-400 text-green-600 rounded-md hover:bg-green-50 transition parameter-restore-btn"
+                           title="Restore Parameter"
+                           data-code="${row.parameterCode}">
+                        <i class="bi bi-arrow-counterclockwise text-[10px]"></i>
+                   </button>`
+                : `<button type="button"
+                           class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition parameter-edit-btn"
+                           title="Edit Parameter"
+                           data-code="${row.parameterCode}">
+                        <i class="bi bi-eye text-[10px]"></i>
+                   </button>
+                   <button type="button"
+                           class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition parameter-delete-btn"
+                           title="Delete Parameter"
+                           data-code="${row.parameterCode}"
+                           data-name="${row.parameterName ?? row.parameterCode}">
+                        <i class="bi bi-trash text-[10px]"></i>
+                   </button>`;
+            return `
+            <tr class="${rowClasses}">
                 <td class="px-3 py-2 font-medium text-gray-900">${row.parameterCode}</td>
                 <td class="px-3 py-2">${row.parameterName ?? ''}</td>
                 <td class="px-3 py-2">${row.unit ?? '-'}</td>
@@ -98,24 +154,36 @@
                 <td class="px-3 py-2 text-xs text-gray-500">${formatDate(row.createdAt)}</td>
                 <td class="px-3 py-2 text-xs text-gray-500">${formatDate(row.updatedAt)}</td>
                 <td class="px-3 py-2 text-center">
-                    <div class="flex items-center justify-center gap-2">
-                        <button type="button"
-                                class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition parameter-edit-btn"
-                                title="Edit Parameter"
-                                data-code="${row.parameterCode}">
-                            <i class="bi bi-eye text-[10px]"></i>
-                        </button>
-                        <button type="button"
-                                class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition parameter-delete-btn"
-                                title="Delete Parameter"
-                                data-code="${row.parameterCode}"
-                                data-name="${row.parameterName ?? row.parameterCode}">
-                            <i class="bi bi-trash text-[10px]"></i>
-                        </button>
-                    </div>
+                    <div class="flex items-center justify-center gap-2">${actionButtons}</div>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
+
+        updatePaginationMeta(totalItems, totalPages, state.page, startIndex, pageItems.length);
+    };
+
+    const updatePaginationMeta = (totalItems, totalPages, currentPage, startIndex = 0, pageCount = 0) => {
+        if (paginationInfoEl) {
+            if (!totalItems) {
+                paginationInfoEl.textContent = 'No parameters to display';
+            } else {
+                const start = startIndex + 1;
+                const end = startIndex + pageCount;
+                paginationInfoEl.textContent = `Showing ${start}-${end} of ${totalItems} parameters`;
+            }
+        }
+
+        if (pageIndicatorEl) {
+            pageIndicatorEl.textContent = `Page ${Math.max(currentPage, 1)} of ${Math.max(totalPages, 1)}`;
+        }
+
+        if (prevPageBtn) {
+            prevPageBtn.disabled = currentPage <= 1;
+        }
+        if (nextPageBtn) {
+            nextPageBtn.disabled = currentPage >= totalPages || totalItems === 0;
+        }
     };
 
     const filterRows = () => {
@@ -129,6 +197,7 @@
                 (item.unit ?? '').toLowerCase().includes(keyword)
             );
         }
+        state.page = 1;
         renderRows(state.filtered);
     };
 
@@ -162,13 +231,16 @@
             if (!res.ok) return handleFetchError(res);
             const json = await res.json();
             const data = unwrapOrThrow(json, 'Failed to load parameters.');
-            state.parameters = Array.isArray(data) ? data : [];
+            state.parameters = Array.isArray(data) ? data.map(item => ({
+                ...item,
+                isDeleted: !!item.isDeleted
+            })) : [];
             state.filtered = [...state.parameters];
             renderRows(state.filtered);
         } catch (error) {
             console.error(error);
             if (tableBody) {
-                tableBody.innerHTML = `<tr><td colspan="8" class="px-3 py-6 text-center text-red-500">${error.message || 'Failed to load parameters.'}</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="9" class="px-3 py-6 text-center text-red-500">${error.message || 'Failed to load parameters.'}</td></tr>`;
             }
         }
     };
@@ -213,7 +285,10 @@
             const json = await res.json();
             const created = unwrapOrThrow(json, 'Failed to create parameter.');
             alert(json?.message || 'Parameter created.');
-            state.parameters.push(created);
+            state.parameters.push({
+                ...created,
+                isDeleted: !!created.isDeleted
+            });
             filterRows();
             resetAddFields();
             toggleModal(addModal, false);
@@ -262,7 +337,11 @@
             alert(json?.message || 'Updated successfully.');
             const index = state.parameters.findIndex(p => p.parameterCode === code);
             if (index > -1) {
-                state.parameters[index] = updated;
+                state.parameters[index] = {
+                    ...state.parameters[index],
+                    ...updated,
+                    isDeleted: !!updated.isDeleted
+                };
             }
             filterRows();
             toggleModal(editModal, false);
@@ -284,9 +363,16 @@
             });
             if (!res.ok) await handleFetchError(res);
             const json = await res.json();
-            unwrapOrThrow(json, 'Failed to delete parameter.');
+            const deleted = unwrapOrThrow(json, 'Failed to delete parameter.');
             alert(json?.message || 'Deleted.');
-            state.parameters = state.parameters.filter(p => p.parameterCode !== code);
+            const index = state.parameters.findIndex(p => p.parameterCode === code);
+            if (index > -1) {
+                state.parameters[index] = {
+                    ...state.parameters[index],
+                    ...deleted,
+                    isDeleted: true
+                };
+            }
             filterRows();
             if (!editModal.classList.contains('hidden') && document.getElementById('editParameterCode').value === code) {
                 toggleModal(editModal, false);
@@ -294,6 +380,34 @@
         } catch (error) {
             console.error(error);
             alert(error.message || 'Failed to delete parameter.');
+        }
+    };
+
+    const restoreParameter = async (code) => {
+        if (!code) return;
+        try {
+            const res = await fetch(resolveRoute('restore'), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ parameterCode: code })
+            });
+            if (!res.ok) await handleFetchError(res);
+            const json = await res.json();
+            const restored = unwrapOrThrow(json, 'Failed to restore parameter.');
+            alert(json?.message || 'Restored.');
+            const index = state.parameters.findIndex(p => p.parameterCode === code);
+            if (index > -1) {
+                state.parameters[index] = {
+                    ...state.parameters[index],
+                    ...restored,
+                    isDeleted: false
+                };
+            }
+            filterRows();
+        } catch (error) {
+            console.error(error);
+            alert(error.message || 'Failed to restore parameter.');
         }
     };
 
@@ -325,6 +439,12 @@
         const deleteRowBtn = event.target.closest('.parameter-delete-btn');
         if (deleteRowBtn) {
             deleteParameter(deleteRowBtn.dataset.code, deleteRowBtn.dataset.name);
+            return;
+        }
+
+        const restoreBtn = event.target.closest('.parameter-restore-btn');
+        if (restoreBtn) {
+            restoreParameter(restoreBtn.dataset.code);
         }
     });
 
@@ -332,6 +452,28 @@
     exportBtn?.addEventListener('click', () => {
         if (!routes.export) return;
         window.open(routes.export, '_blank');
+    });
+
+    pageSizeSelect?.addEventListener('change', () => {
+        const value = parseInt(pageSizeSelect.value, 10);
+        state.pageSize = Number.isNaN(value) ? 10 : value;
+        state.page = 1;
+        renderRows(state.filtered);
+    });
+
+    prevPageBtn?.addEventListener('click', () => {
+        if (state.page > 1) {
+            state.page -= 1;
+            renderRows(state.filtered);
+        }
+    });
+
+    nextPageBtn?.addEventListener('click', () => {
+        const totalPages = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
+        if (state.page < totalPages) {
+            state.page += 1;
+            renderRows(state.filtered);
+        }
     });
 
     // initial load

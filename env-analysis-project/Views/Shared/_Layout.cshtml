@@ -7,6 +7,7 @@
     var isUserAuthenticated = User.Identity?.IsAuthenticated ?? false;
     var currentUserName = User.Identity?.Name ?? "Account";
     var accessToken = Context.Request.Cookies[JwtDefaults.AccessTokenCookieName];
+    var showAccessDeniedBanner = Context.Request.Query.ContainsKey("accessDenied");
 
     if (isUserAuthenticated)
     {
@@ -60,6 +61,11 @@
         window.authState = {
             accessToken: @Html.Raw(JsonSerializer.Serialize(accessToken ?? string.Empty))
         };
+        if (window.location.search && window.location.search.includes('accessDenied=1')) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('accessDenied');
+            window.history.replaceState({}, document.title, url);
+        }
     </script>
     <script src="~/js/jwt-fetch.js" asp-append-version="true"></script>
 
@@ -162,6 +168,18 @@
 
         </nav>
     </header>
+
+    @if (showAccessDeniedBanner)
+    {
+        <div class="max-w-7xl mx-auto mt-4 px-4">
+            <div role="alert"
+                 class="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
+                <div>
+                    <p class="text-red-700">You do not have permission to view that page.</p>
+                </div>
+            </div>
+        </div>
+    }
 
     <main role="main" class="flex-grow container mx-auto py-4 max-w-7xl">
         @RenderBody()

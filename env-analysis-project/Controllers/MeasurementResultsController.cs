@@ -24,6 +24,7 @@ namespace env_analysis_project.Controllers
         public async Task<IActionResult> Manage()
         {
             var emissionSources = await _context.EmissionSource
+                .Where(s => !s.IsDeleted)
                 .OrderBy(s => s.SourceName)
                 .Select(s => new LookupOption
                 {
@@ -33,6 +34,7 @@ namespace env_analysis_project.Controllers
                 .ToListAsync();
 
             var parameters = await _context.Parameter
+                .Where(p => !p.IsDeleted)
                 .OrderBy(p => p.ParameterName)
                 .Select(p => new ParameterLookup
                 {
@@ -78,8 +80,8 @@ namespace env_analysis_project.Controllers
         // GET: MeasurementResults/Create
         public IActionResult Create()
         {
-            ViewData["EmissionSourceID"] = new SelectList(_context.EmissionSource, "EmissionSourceID", "SourceCode");
-            ViewData["ParameterCode"] = new SelectList(_context.Set<Parameter>(), "ParameterCode", "ParameterCode");
+            ViewData["EmissionSourceID"] = new SelectList(_context.EmissionSource.Where(e => !e.IsDeleted), "EmissionSourceID", "SourceCode");
+            ViewData["ParameterCode"] = new SelectList(_context.Set<Parameter>().Where(p => !p.IsDeleted), "ParameterCode", "ParameterCode");
             return View();
         }
 
@@ -96,8 +98,8 @@ namespace env_analysis_project.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["EmissionSourceID"] = new SelectList(_context.EmissionSource, "EmissionSourceID", "SourceCode", measurementResult.EmissionSourceID);
-            ViewData["ParameterCode"] = new SelectList(_context.Set<Parameter>(), "ParameterCode", "ParameterCode", measurementResult.ParameterCode);
+            ViewData["EmissionSourceID"] = new SelectList(_context.EmissionSource.Where(e => !e.IsDeleted), "EmissionSourceID", "SourceCode", measurementResult.EmissionSourceID);
+            ViewData["ParameterCode"] = new SelectList(_context.Set<Parameter>().Where(p => !p.IsDeleted), "ParameterCode", "ParameterCode", measurementResult.ParameterCode);
             return View(measurementResult);
         }
 
@@ -114,8 +116,8 @@ namespace env_analysis_project.Controllers
             {
                 return NotFound();
             }
-            ViewData["EmissionSourceID"] = new SelectList(_context.EmissionSource, "EmissionSourceID", "SourceCode", measurementResult.EmissionSourceID);
-            ViewData["ParameterCode"] = new SelectList(_context.Set<Parameter>(), "ParameterCode", "ParameterCode", measurementResult.ParameterCode);
+            ViewData["EmissionSourceID"] = new SelectList(_context.EmissionSource.Where(e => !e.IsDeleted), "EmissionSourceID", "SourceCode", measurementResult.EmissionSourceID);
+            ViewData["ParameterCode"] = new SelectList(_context.Set<Parameter>().Where(p => !p.IsDeleted), "ParameterCode", "ParameterCode", measurementResult.ParameterCode);
             return View(measurementResult);
         }
 
@@ -151,8 +153,8 @@ namespace env_analysis_project.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["EmissionSourceID"] = new SelectList(_context.EmissionSource, "EmissionSourceID", "SourceCode", measurementResult.EmissionSourceID);
-            ViewData["ParameterCode"] = new SelectList(_context.Set<Parameter>(), "ParameterCode", "ParameterCode", measurementResult.ParameterCode);
+            ViewData["EmissionSourceID"] = new SelectList(_context.EmissionSource.Where(e => !e.IsDeleted), "EmissionSourceID", "SourceCode", measurementResult.EmissionSourceID);
+            ViewData["ParameterCode"] = new SelectList(_context.Set<Parameter>().Where(p => !p.IsDeleted), "ParameterCode", "ParameterCode", measurementResult.ParameterCode);
             return View(measurementResult);
         }
 
@@ -388,7 +390,7 @@ namespace env_analysis_project.Controllers
                 .ToListAsync();
 
             var metadata = await _context.Parameter
-                .Where(p => p.ParameterCode.ToUpper() == normalizedCodeUpper)
+                .Where(p => p.ParameterCode.ToUpper() == normalizedCodeUpper && !p.IsDeleted)
                 .Select(p => new ParameterLookup
                 {
                     Code = p.ParameterCode,
@@ -516,12 +518,12 @@ namespace env_analysis_project.Controllers
                 return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Invalid measurement result payload.", validationErrors));
             }
 
-            if (!await _context.EmissionSource.AnyAsync(s => s.EmissionSourceID == request.EmissionSourceId))
+            if (!await _context.EmissionSource.AnyAsync(s => s.EmissionSourceID == request.EmissionSourceId && !s.IsDeleted))
             {
                 return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Emission source not found."));
             }
 
-            if (!await _context.Parameter.AnyAsync(p => p.ParameterCode == request.ParameterCode))
+            if (!await _context.Parameter.AnyAsync(p => p.ParameterCode == request.ParameterCode && !p.IsDeleted))
             {
                 return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Parameter not found."));
             }
@@ -592,12 +594,12 @@ namespace env_analysis_project.Controllers
                 return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Invalid measurement result payload.", validationErrors));
             }
 
-            if (!await _context.EmissionSource.AnyAsync(s => s.EmissionSourceID == request.EmissionSourceId))
+            if (!await _context.EmissionSource.AnyAsync(s => s.EmissionSourceID == request.EmissionSourceId && !s.IsDeleted))
             {
                 return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Emission source not found."));
             }
 
-            if (!await _context.Parameter.AnyAsync(p => p.ParameterCode == request.ParameterCode))
+            if (!await _context.Parameter.AnyAsync(p => p.ParameterCode == request.ParameterCode && !p.IsDeleted))
             {
                 return BadRequest(ApiResponse.Fail<MeasurementResultDto>("Parameter not found."));
             }

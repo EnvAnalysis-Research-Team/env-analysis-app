@@ -19,14 +19,42 @@ namespace env_analysis_project.Data
             using var scope = app.ApplicationServices.CreateScope();
 
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var logger = scope.ServiceProvider
                 .GetRequiredService<ILoggerFactory>()
                 .CreateLogger(nameof(IdentityDataSeeder));
 
+            var defaultRoles = new[] { "Admin", "User" };
+            foreach (var roleName in defaultRoles)
+            {
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    var createRoleResult = await roleManager.CreateAsync(new IdentityRole(roleName));
+                    if (!createRoleResult.Succeeded)
+                    {
+                        var error = string.Join(", ", createRoleResult.Errors.Select(e => e.Description));
+                        logger.LogError("Failed to seed role {Role}: {Error}", roleName, error);
+                        return;
+                    }
+                }
+            }
+
             var existingUser = await userManager.FindByEmailAsync(DefaultAdminEmail);
             if (existingUser != null)
             {
-                logger.LogInformation("Default admin user already exists. Skipping seeding.");
+                var needsUpdate = !string.Equals(existingUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+                if (needsUpdate)
+                {
+                    existingUser.Role = "Admin";
+                    await userManager.UpdateAsync(existingUser);
+                }
+
+                if (!await userManager.IsInRoleAsync(existingUser, "Admin"))
+                {
+                    await userManager.AddToRoleAsync(existingUser, "Admin");
+                }
+
+                logger.LogInformation("Default admin user already exists. Ensured Admin role is applied.");
                 return;
             }
 
@@ -51,6 +79,7 @@ namespace env_analysis_project.Data
                 return;
             }
 
+            await userManager.AddToRoleAsync(adminUser, "Admin");
             logger.LogInformation("Seeded default admin account {Email} with Bogus profile data.", DefaultAdminEmail);
         }
     }

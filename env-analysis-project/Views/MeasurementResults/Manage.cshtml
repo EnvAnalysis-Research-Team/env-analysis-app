@@ -12,7 +12,7 @@
     @Html.AntiForgeryToken()
 </form>
 
-<div class="space-y-6">
+<div class="space-y-4">
     <div class="max-w-8xl mx-auto bg-white border border-gray-200 rounded-md shadow-sm p-5 space-y-4">
         <div class="flex flex-col lg:flex-row gap-6">
             <div class="lg:w-1/3 space-y-2">
@@ -21,33 +21,33 @@
                     <p class="text-xs text-gray-500">Select a parameter and optionally filter the month range.</p>
                 </div>
                 <select id="parameterTrendSelect"
-                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white"></select>
-                <form id="trendFilterForm" class="space-y-3 text-xs bg-gray-50 border border-dashed border-gray-200 rounded-sm p-3">
+                    class="w-full border border-gray-300 rounded-sm px-3 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white"></select>
+                <form id="trendFilterForm"
+                    class="space-y-3 text-xs bg-gray-50 border border-dashed border-gray-200 rounded-sm p-3">
                     <div class="grid grid-cols-1 gap-2">
                         <label class="font-medium text-gray-700" for="trendFilterSource">Source</label>
                         <select id="trendFilterSource"
-                                class="border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white">
+                            class="border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white">
                             <option value="">All sources</option>
                         </select>
                     </div>
                     <div class="grid grid-cols-1 gap-2">
                         <label class="font-medium text-gray-700" for="trendFilterStart">From month</label>
-                        <input id="trendFilterStart"
-                               type="month"
-                               class="border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white" />
+                        <input id="trendFilterStart" type="month"
+                            class="border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white" />
                     </div>
                     <div class="grid grid-cols-1 gap-2">
                         <label class="font-medium text-gray-700" for="trendFilterEnd">To month</label>
-                        <input id="trendFilterEnd"
-                               type="month"
-                               class="border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white" />
+                        <input id="trendFilterEnd" type="month"
+                            class="border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white" />
                     </div>
                     <div class="flex items-center gap-2 pt-1">
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-sm font-semibold transition">
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-sm font-semibold transition">
                             Apply filter
                         </button>
                         <button type="button" id="trendFilterReset"
-                                class="px-3 py-1.5 rounded-sm border border-gray-300 text-gray-700 hover:bg-gray-100 transition">
+                            class="px-3 py-1.5 rounded-sm border border-gray-300 text-gray-700 hover:bg-gray-100 transition">
                             Reset
                         </button>
                     </div>
@@ -57,7 +57,7 @@
                 <div class="relative h-72">
                     <canvas id="parameterTrendChart" class="absolute inset-0 w-full h-full invisible"></canvas>
                     <div id="trendChartPlaceholder"
-                         class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm text-center px-6">
+                        class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm text-center px-6">
                         Select a parameter to generate the chart.
                     </div>
                 </div>
@@ -86,12 +86,14 @@
                         </tr>
                     </tbody>
                 </table>
-                <div class="pt-3 border-t border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-[11px] text-gray-600">
+                <div
+                    class="pt-3 border-t border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-[11px] text-gray-600">
                     <div id="trendTableSummary">No data</div>
                     <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                         <label class="flex items-center gap-2">
                             <span class="text-gray-500">Rows per page</span>
-                            <select id="trendTablePageSize" class="border border-gray-300 rounded-sm px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                            <select id="trendTablePageSize"
+                                class="border border-gray-300 rounded-sm px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none">
                                 <option value="6">6</option>
                                 <option value="12" selected>12</option>
                             </select>
@@ -99,14 +101,12 @@
                         <div class="flex items-center gap-3">
                             <span id="trendTablePageLabel">Page 1 of 1</span>
                             <div class="inline-flex border border-gray-300 rounded-md overflow-hidden">
-                                <button type="button"
-                                        id="trendTablePrev"
-                                        class="px-3 py-1.5 text-xs text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
+                                <button type="button" id="trendTablePrev"
+                                    class="px-3 py-1.5 text-xs text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
                                     Prev
                                 </button>
-                                <button type="button"
-                                        id="trendTableNext"
-                                        class="px-3 py-1.5 text-xs text-gray-600 border-l border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
+                                <button type="button" id="trendTableNext"
+                                    class="px-3 py-1.5 text-xs text-gray-600 border-l border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
                                     Next
                                 </button>
                             </div>
@@ -120,36 +120,32 @@
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <div>
                 <h1 class="text-lg font-semibold text-gray-800">Measurement Data</h1>
-                <p class="text-xs text-gray-500">Track, approve, and audit measurements across air and water sources.</p>
+                <p class="text-xs text-gray-500">Track, approve, and audit measurements across air and water sources.
+                </p>
             </div>
             <div class="w-full flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap sm:justify-end text-xs">
-                <input id="resultsSearchInput"
-                       type="text"
-                       placeholder="Search source, parameter, or status..."
-                       class="w-full sm:w-72 text-xs border border-gray-300 rounded-md px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                <input id="resultsSearchInput" type="text" placeholder="Search source, parameter, or status..."
+                    class="w-full sm:w-72 text-xs border border-gray-300 rounded-md px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 <div class="flex flex-wrap items-center gap-2">
-                    <button type="button"
-                            id="resultsSearchReset"
-                            class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    <button type="button" id="resultsSearchReset"
+                        class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-md transition">
                         <i class="bi bi-arrow-counterclockwise text-[9px]"></i>
                         Reset
                     </button>
-                    <button type="button"
-                            id="openResultsFilterBtn"
-                            class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    <button type="button" id="openResultsFilterBtn"
+                        class="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-md transition">
                         <i class="bi bi-sliders text-[9px]"></i>
                         Filters
-                        <span id="activeFiltersBadge" class="hidden text-[10px] font-semibold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full leading-none">0</span>
+                        <span id="activeFiltersBadge"
+                            class="hidden text-[10px] font-semibold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full leading-none">0</span>
                     </button>
-                    <button id="exportResultsBtn"
-                            type="button"
-                            class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    <button id="exportResultsBtn" type="button"
+                        class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
                         <i class="bi bi-download text-[9px]"></i>
                         Export
                     </button>
-                    <button id="openAddResultBtn"
-                            type="button"
-                            class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
+                    <button id="openAddResultBtn" type="button"
+                        class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-2.5 py-1 rounded-md transition">
                         <i class="bi bi-plus text-[9px]"></i>
                         Add Result
                     </button>
@@ -160,19 +156,18 @@
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
             <div class="flex items-center justify-between">
                 <div class="flex gap-2 border-b border-gray-200 text-xs font-medium">
-                    <button type="button"
-                            class="tab-button px-4 py-2 -mb-px border-b-2 border-blue-600 text-blue-600"
-                            data-tab="all">
+                    <button type="button" class="tab-button px-4 py-2 -mb-px border-b-2 border-blue-600 text-blue-600"
+                        data-tab="all">
                         All
                     </button>
                     <button type="button"
-                            class="tab-button px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-blue-600"
-                            data-tab="water">
+                        class="tab-button px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-blue-600"
+                        data-tab="water">
                         Water
                     </button>
                     <button type="button"
-                            class="tab-button px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-blue-600"
-                            data-tab="air">
+                        class="tab-button px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-blue-600"
+                        data-tab="air">
                         Air
                     </button>
                 </div>
@@ -217,7 +212,8 @@
                     </thead>
                     <tbody id="waterResultsBody" class="divide-y divide-gray-200">
                         <tr>
-                            <td colspan="7" class="px-3 py-6 text-center text-gray-400">Loading water measurements...</td>
+                            <td colspan="7" class="px-3 py-6 text-center text-gray-400">Loading water measurements...
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -243,12 +239,14 @@
                 </table>
             </div>
 
-            <div id="resultsPaginationBar" class="pt-2 border-t border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-[11px] text-gray-600">
+            <div id="resultsPaginationBar"
+                class="pt-2 border-t border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-[11px] text-gray-600">
                 <div id="resultsPaginationSummary">No results</div>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                     <label class="flex items-center gap-2">
                         <span class="text-gray-500">Rows per page</span>
-                        <select id="resultsPageSize" class="border border-gray-300 rounded-sm px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        <select id="resultsPageSize"
+                            class="border border-gray-300 rounded-sm px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none">
                             <option value="10">10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
@@ -257,14 +255,12 @@
                     <div class="flex items-center gap-3">
                         <span id="resultsPaginationPageLabel">Page 1 of 1</span>
                         <div class="inline-flex border border-gray-300 rounded-md overflow-hidden">
-                            <button type="button"
-                                    id="resultsPrevPage"
-                                    class="px-3 py-1.5 text-xs text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
+                            <button type="button" id="resultsPrevPage"
+                                class="px-3 py-1.5 text-xs text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
                                 Prev
                             </button>
-                            <button type="button"
-                                    id="resultsNextPage"
-                                    class="px-3 py-1.5 text-xs text-gray-600 border-l border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
+                            <button type="button" id="resultsNextPage"
+                                class="px-3 py-1.5 text-xs text-gray-600 border-l border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
                                 Next
                             </button>
                         </div>
@@ -274,90 +270,103 @@
         </div>
     </div>
 </div>
-
 <!-- Add Result Modal -->
 <div id="addResultModal"
      class="app-modal fixed inset-0 bg-black bg-opacity-40 items-start justify-center z-50 p-4 pt-16 transition-all duration-200"
      aria-hidden="true">
+
     <div id="addResultModalPanel"
          class="app-modal__panel app-modal__panel--lg bg-white rounded-md shadow-lg w-full max-w-3xl p-5 space-y-5 h-fit">
+
+        <!-- Header -->
         <div class="flex justify-between items-start border-b border-gray-200 pb-3">
             <div>
                 <h2 class="text-sm font-semibold text-gray-700">Add Measurement Result</h2>
                 <p class="text-xs text-gray-500">Record a new reading for water or air.</p>
             </div>
-            <button type="button" id="closeAddResultBtn" class="text-gray-500 hover:text-gray-700">
+            <button type="button" id="closeAddResultBtn"
+                    class="text-gray-500 hover:text-gray-700">
                 <i class="bi bi-x-lg text-xs"></i>
             </button>
         </div>
 
+        <!-- Content -->
         <div class="space-y-4 text-xs" id="addResultContent">
-            <div>
-                <label class="block font-medium text-gray-700 mb-1">Measurement Type</label>
-                <div class="flex items-center gap-4">
-                    <label class="inline-flex items-center gap-1">
-                        <input type="radio" name="addResultType" value="water" class="text-blue-600 border-gray-300" checked />
-                        Water
-                    </label>
-                    <label class="inline-flex items-center gap-1">
-                        <input type="radio" name="addResultType" value="air" class="text-blue-600 border-gray-300" />
-                        Air
-                    </label>
-                </div>
-            </div>
+
+            <!-- Emission Source + Measurement Type -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Emission Source</label>
                     <select id="addResultSource"
-                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
-                </div>
-                <div>
-                    <label class="block font-medium text-gray-700 mb-1">Parameter</label>
-                    <select id="addResultParameter"
-                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></select>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                    <label class="block font-medium text-gray-700 mb-1">Value</label>
-                    <input type="number" step="0.0001" id="addResultValue"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
-                </div>
-                <div>
-                    <label class="block font-medium text-gray-700 mb-1">Unit</label>
-                    <input type="text" id="addResultUnit"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                    <label class="block font-medium text-gray-700 mb-1">Measurement Date</label>
-                    <input type="datetime-local" id="addResultDate"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
-                </div>
-                <div>
-                    <label class="block font-medium text-gray-700 mb-1">Status</label>
-                    <select id="addResultStatus"
-                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
-                        <option value="Approved">Approved</option>
-                        <option value="Pending">Pending</option>
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5
+                                   focus:ring-1 focus:ring-blue-500 focus:outline-none">
                     </select>
                 </div>
+
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Measurement Type</label>
+                    <div class="flex items-center gap-4 h-[34px]">
+                        <label class="inline-flex items-center gap-1">
+                            <input type="radio" name="addResultType" value="water"
+                                   class="text-blue-600 border-gray-300" checked>
+                            Water
+                        </label>
+                        <label class="inline-flex items-center gap-1">
+                            <input type="radio" name="addResultType" value="air"
+                                   class="text-blue-600 border-gray-300">
+                            Air
+                        </label>
+                    </div>
+                </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                    <label class="block font-medium text-gray-700 mb-1">Approved At</label>
-                    <input type="datetime-local" id="addResultApprovedAt"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+
+            <!-- Parameter + Value (SAME ROW) -->
+            <div class="flex flex-col md:flex-row gap-3 items-end">
+                <div class="w-full md:w-1/2">
+                    <label class="block font-medium text-gray-700 mb-1">Parameter</label>
+                    <select id="addResultParameter"
+                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5
+                                   focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    </select>
                 </div>
-                <div>
-                    <label class="block font-medium text-gray-700 mb-1">Remark</label>
-                    <textarea id="addResultRemark" rows="3"
-                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+
+                <div class="w-full md:w-1/2">
+                    <label class="block font-medium text-gray-700 mb-1">Value</label>
+                    <input type="number" step="0.0001" id="addResultValue"
+                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5
+                                  focus:ring-1 focus:ring-blue-500 focus:outline-none">
                 </div>
+            </div>
+
+            <!-- Remark -->
+            <div>
+                <label class="block font-medium text-gray-700 mb-1">Remark</label>
+                <textarea id="addResultRemark" rows="3"
+                          class="w-full border border-gray-300 rounded-sm px-3 py-1.5
+                                 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                </textarea>
+            </div>
+
+            <!-- Hidden fields + Approve -->
+            <div class="space-y-3">
+                <input type="hidden" id="addResultDate">
+                <input type="hidden" id="addResultApprovedAt">
+
+                @if (User.IsInRole("Admin"))
+                {
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="addResultApprovedCheckbox"
+                               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="addResultApprovedCheckbox"
+                               class="text-xs text-gray-700">
+                            Approve immediately
+                        </label>
+                    </div>
+                }
             </div>
         </div>
 
+        <!-- Footer -->
         <div class="flex justify-end space-x-2 pt-3 border-t border-gray-100">
             <button type="button" id="cancelAddResultBtn"
                     class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
@@ -369,14 +378,16 @@
                 Save Result
             </button>
         </div>
+
     </div>
 </div>
+
 <!-- Filter Results Modal -->
 <div id="resultsFilterModal"
-     class="app-modal fixed inset-0 bg-black bg-opacity-40 items-start justify-center z-50 p-4 pt-16 transition-all duration-200"
-     aria-hidden="true">
+    class="app-modal fixed inset-0 bg-black bg-opacity-40 items-start justify-center z-50 p-4 pt-16 transition-all duration-200"
+    aria-hidden="true">
     <div id="resultsFilterModalPanel"
-         class="app-modal__panel app-modal__panel--md bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-5 h-fit">
+        class="app-modal__panel app-modal__panel--md bg-white rounded-md shadow-lg w-full max-w-xl p-5 space-y-5 h-fit">
         <div class="flex justify-between items-start border-b border-gray-200 pb-3">
             <div>
                 <h2 class="text-sm font-semibold text-gray-700">Filter Measurement Data</h2>
@@ -391,14 +402,14 @@
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Emission Source</label>
                     <select id="filterSourceSelect"
-                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                         <option value="">All sources</option>
                     </select>
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Parameter</label>
                     <select id="filterParameterSelect"
-                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                         <option value="">All parameters</option>
                     </select>
                 </div>
@@ -407,7 +418,7 @@
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Status</label>
                     <select id="filterStatusSelect"
-                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
                         <option value="">All statuses</option>
                         <option value="approved">Approved</option>
                         <option value="pending">Pending</option>
@@ -419,12 +430,12 @@
                         <div class="space-y-1">
                             <span class="text-xs text-gray-500 block">From</span>
                             <input type="date" id="filterStartDate"
-                                   class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                                class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                         </div>
                         <div class="space-y-1">
                             <span class="text-xs text-gray-500 block">To</span>
                             <input type="date" id="filterEndDate"
-                                   class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                                class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                         </div>
                     </div>
                 </div>
@@ -432,17 +443,17 @@
         </div>
         <div class="flex justify-between items-center pt-3 border-t border-gray-100">
             <button type="button" id="resetResultsFilterBtn"
-                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
+                class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
                 <i class="bi bi-arrow-counterclockwise text-[11px]"></i>
                 Clear Filters
             </button>
             <div class="flex space-x-2">
                 <button type="button" id="cancelResultsFilterBtn"
-                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                     Cancel
                 </button>
                 <button type="button" id="applyResultsFilterBtn"
-                        class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
                     <i class="bi bi-sliders text-[11px]"></i>
                     Apply Filters
                 </button>
@@ -453,9 +464,10 @@
 
 <!-- Edit Result Modal -->
 <div id="editResultModal"
-     class="app-modal fixed inset-0 bg-black bg-opacity-40 items-start justify-center z-50 p-4 pt-16 transition-all duration-200"
-     aria-hidden="true">
-    <div class="app-modal__panel app-modal__panel--lg bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-5 h-fit">
+    class="app-modal fixed inset-0 bg-black bg-opacity-40 items-start justify-center z-50 p-4 pt-16 transition-all duration-200"
+    aria-hidden="true">
+    <div
+        class="app-modal__panel app-modal__panel--lg bg-white rounded-md shadow-lg w-full max-w-2xl p-5 space-y-5 h-fit">
         <div class="flex justify-between items-start border-b border-gray-200 pb-3">
             <div>
                 <h2 class="text-sm font-semibold text-gray-700">Edit Measurement Result</h2>
@@ -487,13 +499,13 @@
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Emission Source</label>
                     <select id="editResultSource"
-                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
                     </select>
                 </div>
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Parameter</label>
                     <select id="editResultParameter"
-                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
                     </select>
                 </div>
             </div>
@@ -502,67 +514,59 @@
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Value</label>
                     <input type="number" step="0.0001" id="editResultValue"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
-                    <label class="block font-medium text-gray-700 mb-1">Unit</label>
-                    <input type="text" id="editResultUnit"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    <label class="block font-medium text-gray-700 mb-1">Remark</label>
+                    <textarea id="editResultRemark" rows="3"
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="space-y-3">
                 <div>
                     <label class="block font-medium text-gray-700 mb-1">Measurement Date</label>
-                    <input type="datetime-local" id="editResultDate"
-                           readonly tabindex="-1"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-gray-100 text-gray-600 cursor-not-allowed" />
+                    <input type="datetime-local" id="editResultDate" readonly tabindex="-1"
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-gray-100 text-gray-600 cursor-not-allowed" />
                     <p class="text-xs text-gray-500 mt-1">
                         Timestamp locked after creation.
                     </p>
                 </div>
                 <div>
-                    <label class="block font-medium text-gray-700 mb-1">Status</label>
-                    <select id="editResultStatus"
-                            class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none">
-                        <option value="Approved">Approved</option>
-                        <option value="Pending">Pending</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
                     <label class="block font-medium text-gray-700 mb-1">Approved At</label>
-                    <input type="datetime-local" id="editResultApprovedAt"
-                           readonly tabindex="-1"
-                           class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-gray-100 text-gray-600 cursor-not-allowed" />
+                    <input type="datetime-local" id="editResultApprovedAt" readonly tabindex="-1"
+                        class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-gray-100 text-gray-600 cursor-not-allowed" />
                     <p class="text-xs text-gray-500 mt-1">
                         Auto-managed when approval status changes.
                     </p>
                 </div>
-                <div>
-                    <label class="block font-medium text-gray-700 mb-1">Remark</label>
-                    <textarea id="editResultRemark" rows="3"
-                              class="w-full border border-gray-300 rounded-sm px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
-                </div>
+                @if (User.IsInRole("Admin"))
+                {
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="editResultApprovedCheckbox"
+                            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        <label for="editResultApprovedCheckbox" class="text-xs text-gray-700">
+                            Approve this measurement
+                        </label>
+                    </div>
+                }
             </div>
         </div>
 
         <div class="flex justify-between items-center pt-3 border-t border-gray-100">
             <button type="button" id="deleteResultBtn"
-                    class="text-xs text-red-600 hover:text-red-700 inline-flex items-center gap-1">
+                class="text-xs text-red-600 hover:text-red-700 inline-flex items-center gap-1">
                 <i class="bi bi-trash-fill text-[11px]"></i>
                 Delete Result
             </button>
 
             <div class="flex space-x-2">
                 <button type="button" id="cancelEditResultBtn"
-                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-sm transition">
                     Close
                 </button>
                 <button type="button" id="updateResultBtn"
-                        class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition inline-flex items-center gap-1">
                     <i class="bi bi-save text-[11px]"></i>
                     Save changes
                 </button>
@@ -579,14 +583,14 @@
 
 @section Scripts {
     <script>
-        function loadPage(){
+        function loadPage() {
             window.location.reload();
-        } 
+        }
 
         window.measurementResultLookups = {
             emissionSources: @Html.Raw(emissionSourcesJson),
             parameters: @Html.Raw(parametersJson)
-        };
+            };
         window.measurementResultRoutes = {
             list: '@Url.Action("ListData", "MeasurementResults")',
             detail: '@Url.Action("DetailData", "MeasurementResults")',
@@ -596,6 +600,9 @@
             trend: '@Url.Action("ParameterTrends", "MeasurementResults")',
             export: '@Url.Action("ExportCsv", "MeasurementResults")'
         };
+        window.measurementResultPermissions = {
+            canApprove: @User.IsInRole("Admin").ToString().ToLowerInvariant()
+            };
     </script>
     <script src="~/js/measurement-results-management.js" asp-append-version="true"></script>
 }

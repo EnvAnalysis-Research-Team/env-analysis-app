@@ -3,6 +3,7 @@
 (function () {
     const routes = window.measurementResultRoutes || {};
     const lookups = window.measurementResultLookups || { emissionSources: [], parameters: [] };
+    const permissions = window.measurementResultPermissions || { canApprove: false };
 
     const getAntiForgeryToken = () =>
         document.querySelector('#measurementResultsAntiForgery input[name="__RequestVerificationToken"]')?.value || '';
@@ -77,11 +78,10 @@
         source: document.getElementById('addResultSource'),
         parameter: document.getElementById('addResultParameter'),
         value: document.getElementById('addResultValue'),
-        unit: document.getElementById('addResultUnit'),
         date: document.getElementById('addResultDate'),
-        status: document.getElementById('addResultStatus'),
         approvedAt: document.getElementById('addResultApprovedAt'),
-        remark: document.getElementById('addResultRemark')
+        remark: document.getElementById('addResultRemark'),
+        approvedCheckbox: document.getElementById('addResultApprovedCheckbox')
     };
 
     const editForm = {
@@ -89,12 +89,12 @@
         source: document.getElementById('editResultSource'),
         parameter: document.getElementById('editResultParameter'),
         value: document.getElementById('editResultValue'),
-        unit: document.getElementById('editResultUnit'),
         date: document.getElementById('editResultDate'),
-        status: document.getElementById('editResultStatus'),
         approvedAt: document.getElementById('editResultApprovedAt'),
-        remark: document.getElementById('editResultRemark')
+        remark: document.getElementById('editResultRemark'),
+        approvedCheckbox: document.getElementById('editResultApprovedCheckbox')
     };
+
 
     const filterForm = {
         source: elements.filterSourceSelect,
@@ -153,6 +153,17 @@
     if (elements.pageSizeSelect) {
         elements.pageSizeSelect.value = DEFAULT_PAGE_SIZE;
     }
+
+    const findResultInState = (resultId) => {
+        const numericId = Number(resultId);
+        if (!Number.isFinite(numericId)) return null;
+        for (const tab of TAB_KEYS) {
+            const dataset = state.datasets[tab] ?? [];
+            const match = dataset.find(item => Number(item.resultID) === numericId);
+            if (match) return match;
+        }
+        return null;
+    };
 
     const trend = {
         selectedCode: null,
@@ -215,6 +226,12 @@
         }
     };
 
+    const nowAsInputValue = () => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 16);
+    };
+
     const formatNumericValue = (value) => {
         if (value === null || value === undefined) return '-';
         const number = Number(value);
@@ -223,10 +240,48 @@
             : '-';
     };
 
+    const toIsoStringOrNull = (value) => {
+        if (!value) return null;
+        const date = value instanceof Date ? value : new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    };
+
+    const toNumericOrNull = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+        const number = Number(value);
+        return Number.isFinite(number) ? number : null;
+    };
+
     const renderOptions = (select, items, valueKey, labelKey) => {
         if (!select) return;
         select.innerHTML = items.map(item => `<option value="${item[valueKey]}">${item[labelKey]}</option>`).join('');
     };
+
+    const syncApprovalCheckbox = (checkbox, approvedInput) => {
+        if (!checkbox || !approvedInput) return;
+        checkbox.checked = Boolean(approvedInput.value);
+    };
+
+    const bindApprovalCheckbox = (checkbox, approvedInput) => {
+        if (!checkbox || !approvedInput) return;
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+                if (!approvedInput.value) {
+                    approvedInput.value = nowAsInputValue();
+                }
+            } else {
+                approvedInput.value = '';
+            }
+        });
+    };
+
+    const findParameterMeta = (code) => {
+        if (!code) return null;
+        return (lookups.parameters || []).find(item => item.code === code) || null;
+    };
+
+    bindApprovalCheckbox(addForm.approvedCheckbox, addForm.approvedAt);
+    bindApprovalCheckbox(editForm.approvedCheckbox, editForm.approvedAt);
 
     const setFilterFormValues = (values = state.filters) => {
         const normalized = { ...createDefaultFilters(), ...values };
@@ -764,6 +819,15 @@
                 ? `<td class=\"px-3 py-2 capitalize\">${result.type}</td>`
                 : '';
 
+            const approvalAction = permissions.canApprove
+                ? `<button type="button"
+                           class="w-7 h-7 flex items-center justify-center border rounded-md ${result.isApproved ? 'border-green-400 text-green-600 hover:bg-green-50' : 'border-gray-300 text-gray-500 hover:bg-gray-100'} transition result-approve-btn"
+                           title="${result.isApproved ? 'Unapprove result' : 'Approve result'}"
+                           data-id="${result.resultID}">
+                        <i class="bi bi-check text-[10px]"></i>
+                    </button>`
+                : '';
+
             return `
                 <tr class="hover:bg-gray-50 transition">
                     ${typeColumn}
@@ -774,6 +838,7 @@
                     <td class="px-3 py-2 text-center">${statusBadge}</td>
                     <td class="px-3 py-2 text-center">
                         <div class="flex items-center justify-center gap-2">
+                            ${approvalAction}
                             <button type="button"
                                     class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition result-edit-btn"
                                     title="Edit result" data-id="${result.resultID}">
@@ -963,15 +1028,23 @@
         const typeName = mode === 'add' ? 'addResultType' : 'editResultType';
         const checkedType = document.querySelector(`input[name="${typeName}"]:checked`)?.value || 'water';
 
+        const approvedAtIso = form.approvedAt?.value
+            ? new Date(form.approvedAt.value).toISOString()
+            : null;
+        const parameterMeta = findParameterMeta(form.parameter.value);
+        const measurementDateIso = mode === 'add'
+            ? new Date().toISOString()
+            : (form.date?.value ? new Date(form.date.value).toISOString() : null);
+
         return {
             type: checkedType,
             emissionSourceId: Number(form.source.value),
             parameterCode: form.parameter.value,
             value: form.value.value === '' ? null : Number(form.value.value),
-            unit: form.unit.value || null,
-            measurementDate: form.date.value ? new Date(form.date.value).toISOString() : null,
-            isApproved: (form.status.value || 'Approved').toLowerCase() === 'approved',
-            approvedAt: form.approvedAt.value ? new Date(form.approvedAt.value).toISOString() : null,
+            unit: parameterMeta?.unit ?? null,
+            measurementDate: measurementDateIso,
+            isApproved: Boolean(approvedAtIso),
+            approvedAt: approvedAtIso,
             remark: form.remark.value || null
         };
     };
@@ -1007,18 +1080,20 @@
         return unwrapApiResponse(json);
     };
 
-    const openEditModal = async (id) => {
+    const openEditModal = async (id, focusApproval = false) => {
         try {
             const data = await loadDetail(id);
             editForm.id.value = data.resultID;
             editForm.source.value = data.emissionSourceID;
             editForm.parameter.value = data.parameterCode;
             editForm.value.value = data.value ?? '';
-            editForm.unit.value = data.unit ?? '';
             editForm.date.value = formatInputDate(data.measurementDate);
-            editForm.status.value = data.isApproved ? 'Approved' : 'Pending';
             editForm.approvedAt.value = formatInputDate(data.approvedAt);
             editForm.remark.value = data.remark ?? '';
+            syncApprovalCheckbox(editForm.approvedCheckbox, editForm.approvedAt);
+            if (focusApproval && editForm.approvedCheckbox) {
+                editForm.approvedCheckbox.focus();
+            }
             document.querySelectorAll('input[name="editResultType"]').forEach(radio => {
                 radio.checked = radio.value === (data.type || 'water');
             });
@@ -1073,16 +1148,91 @@
         }
     };
 
+    const buildApprovalTogglePayload = (result, targetState) => {
+        if (!result) return null;
+        const emissionSourceId = Number(result.emissionSourceID);
+        if (!Number.isFinite(emissionSourceId)) return null;
+        const measurementDateIso = toIsoStringOrNull(result.measurementDate) ?? new Date().toISOString();
+        const approvedAtIso = targetState
+            ? (toIsoStringOrNull(result.approvedAt) ?? new Date().toISOString())
+            : null;
+
+        const remarkValue = result.remark;
+        const normalizedRemark = remarkValue === undefined || remarkValue === null || remarkValue === ''
+            ? null
+            : remarkValue;
+
+        return {
+            type: typeof result.type === 'string' && result.type ? result.type : 'water',
+            emissionSourceId,
+            parameterCode: result.parameterCode,
+            value: toNumericOrNull(result.value),
+            unit: typeof result.unit === 'string' && result.unit !== '' ? result.unit : null,
+            measurementDate: measurementDateIso,
+            isApproved: targetState,
+            approvedAt: approvedAtIso,
+            remark: normalizedRemark
+        };
+    };
+
+    const toggleResultApproval = async (buttonElement) => {
+        const resultId = buttonElement?.dataset?.id;
+        if (!resultId) return;
+        const result = findResultInState(resultId);
+        if (!result) {
+            alert('Unable to locate measurement data for this action.');
+            return;
+        }
+        const targetState = !result.isApproved;
+        const payload = buildApprovalTogglePayload(result, targetState);
+        if (!payload) {
+            alert('Unable to prepare the approval request.');
+            return;
+        }
+
+        if (buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.classList.add('opacity-50', 'pointer-events-none');
+        }
+
+        try {
+            const res = await fetch(`${routes.update}/${encodeURIComponent(resultId)}`, {
+                method: 'PUT',
+                credentials: 'same-origin',
+                headers: withAntiForgery({
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }),
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) await handleErrorResponse(res);
+            const json = await res.json();
+            if (json?.success === false) throw new Error(json?.message || json?.error || 'Failed to update approval status.');
+            await refreshActiveTab(false);
+        } catch (error) {
+            console.error(error);
+            alert(error.message || 'Failed to update approval status.');
+        } finally {
+            if (buttonElement) {
+                buttonElement.disabled = false;
+                buttonElement.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+    };
+
     const resetAddForm = () => {
         document.querySelector('input[name="addResultType"][value="water"]').checked = true;
         addForm.source.selectedIndex = 0;
         addForm.parameter.selectedIndex = 0;
         addForm.value.value = '';
-        addForm.unit.value = '';
-        addForm.date.value = '';
-        addForm.status.value = 'Approved';
+        if (addForm.date) {
+            addForm.date.value = '';
+        }
         addForm.approvedAt.value = '';
         addForm.remark.value = '';
+        if (addForm.approvedCheckbox) {
+            addForm.approvedCheckbox.checked = false;
+        }
     };
 
     const initTabs = () => {
@@ -1101,6 +1251,11 @@
     };
 
     const tableClickHandler = (event) => {
+        const approveBtn = event.target.closest('.result-approve-btn');
+        if (approveBtn) {
+            toggleResultApproval(approveBtn);
+            return;
+        }
         const editBtn = event.target.closest('.result-edit-btn');
         if (editBtn) {
             openEditModal(editBtn.dataset.id);
@@ -1248,7 +1403,6 @@
     elements.allBody?.addEventListener('click', tableClickHandler);
     elements.waterBody?.addEventListener('click', tableClickHandler);
     elements.airBody?.addEventListener('click', tableClickHandler);
-
     initTabs();
     initSelects();
     updateFilterBadge();
