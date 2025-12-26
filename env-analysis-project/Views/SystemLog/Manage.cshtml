@@ -1,0 +1,214 @@
+@using env_analysis_project.Controllers
+@model SystemLogController.SystemLogViewModel
+@{
+    ViewData["Title"] = "System Log";
+
+    string exportUrl = Url.Action("Export", "SystemLog", new
+    {
+        search = Model.Search,
+        from = Model.From?.ToString("yyyy-MM-dd"),
+        to = Model.To?.ToString("yyyy-MM-dd")
+    }) ?? "#";
+}
+
+<div class="max-w-8xl mx-auto p-4 space-y-6 w-full h-full">
+    <section class="w-full bg-white shadow-sm rounded-md py-4 px-6 text-xs space-y-6">
+
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h1 class="text-lg font-semibold text-gray-800">System Log</h1>
+                <p class="text-xs text-gray-500">Audit trail of user actions across the application.</p>
+            </div>
+            <!-- Filters -->
+            <form method="get" class="flex flex-col gap-3 text-xs lg:flex-row lg:flex-wrap lg:items-end">
+
+                <<!-- Search -->
+                    <div class="flex items-center gap-2 flex-1 min-w-[260px]">
+                        <label class="font-medium text-gray-700 whitespace-nowrap w-14">
+                            Search
+                        </label>
+                        <input type="text" name="search" value="@Model.Search"
+                            placeholder="User, entity, description..." class="flex-1 border border-gray-300 rounded-sm px-3 py-1.5
+                  focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    </div>
+
+                    <!-- From -->
+                    <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+                        <label class="font-medium text-gray-700 whitespace-nowrap w-10">
+                            From
+                        </label>
+                        <input type="date" name="from" value="@(Model.From?.ToString("yyyy-MM-dd"))" class="flex-1 border border-gray-300 rounded-sm px-3 py-1.5
+                  focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    </div>
+
+                    <!-- To -->
+                    <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+                        <label class="font-medium text-gray-700 whitespace-nowrap w-10">
+                            To
+                        </label>
+                        <input type="date" name="to" value="@(Model.To?.ToString("yyyy-MM-dd"))" class="flex-1 border border-gray-300 rounded-sm px-3 py-1.5
+                  focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                    </div>
+
+
+                    <!-- Buttons -->
+                    <div class="flex items-center gap-2">
+                        <input type="hidden" name="page" value="1" />
+                        <input type="hidden" name="pageSize" value="@Model.PageSize" />
+
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1.5 rounded-md transition flex items-center gap-1">
+                            <i class="bi bi-funnel text-[10px]"></i>
+                            Apply
+                        </button>
+
+                        <a href="@Url.Action("Index", "SystemLog")"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-1.5 rounded-md transition flex items-center gap-1">
+                            <i class="bi bi-arrow-clockwise text-[10px]"></i>
+                            Reset
+                        </a>
+                    </div>
+            </form>
+            <a href="@exportUrl"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1.5 rounded-md transition flex items-center gap-1">
+                <i class="bi bi-file-earmark-arrow-down text-[10px]"></i>
+                Export
+            </a>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-md">
+            <table class="min-w-full text-left text-gray-700">
+                <thead class="bg-gray-100 text-gray-600">
+                    <tr>
+                        <th class="px-4 py-2 font-semibold">Timestamp</th>
+                        <th class="px-4 py-2 font-semibold">User</th>
+                        <th class="px-4 py-2 font-semibold">Action</th>
+                        <th class="px-4 py-2 font-semibold">Entity</th>
+                        <th class="px-4 py-2 font-semibold">Description</th>
+                        <th class="px-4 py-2 font-semibold">Metadata</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    @if (Model.Items.Any())
+                    {
+                        foreach (var log in Model.Items)
+                        {
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-4 py-2 whitespace-nowrap">
+                                    @log.OccurredAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                </td>
+                                <td class="px-4 py-2">
+                                    <div class="font-medium">@log.UserDisplayName</div>
+                                    @if (!string.IsNullOrWhiteSpace(log.UserEmail))
+                                    {
+                                        <div class="text-gray-500 text-[11px]">@log.UserEmail</div>
+                                    }
+                                </td>
+                                <td class="px-4 py-2">
+                                    <span
+                                        class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200">
+                                        @log.ActionType
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <div class="font-medium">@log.EntityName</div>
+                                    @if (!string.IsNullOrWhiteSpace(log.EntityId))
+                                    {
+                                        <div class="text-gray-500 text-[11px]">@log.EntityId</div>
+                                    }
+                                </td>
+                                <td class="px-4 py-2">@log.Description</td>
+                                <td class="px-4 py-2 text-[11px] text-gray-600 break-all">
+                                    @log.MetadataJson
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="px-4 py-4 text-center text-gray-400">
+                                No log entries match the current filters.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div
+            class="pt-2 border-t border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-[11px] text-gray-600">
+            <div>
+                @(Model.TotalItems == 0
+                                        ? "No log entries to display"
+                                        : $"Showing {Model.StartItem}-{Model.EndItem} of {Model.TotalItems} entries")
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <label class="flex items-center gap-2">
+                    <span class="text-gray-500">Rows per page</span>
+                    <select id="logPageSizeSelect"
+                        class="border border-gray-300 rounded-sm px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                        <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                        <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                        <option value="100" selected="@(Model.PageSize == 100)">100</option>
+                    </select>
+                </label>
+
+                <div class="flex items-center gap-3">
+                    <span>
+                        Page @Model.Page of @Math.Max((int)Math.Ceiling(Model.TotalItems / (double)Model.PageSize), 1)
+                    </span>
+                    <div class="inline-flex border border-gray-300 rounded-md overflow-hidden">
+                        <button type="button" class="px-3 py-1.5 text-xs hover:bg-gray-100 disabled:opacity-40"
+                            onclick="changeLogPage(@(Model.Page - 1))" @(Model.Page <= 1 ? "disabled" : null)>
+                            Prev
+                        </button>
+                        <button type="button"
+                            class="px-3 py-1.5 text-xs border-l border-gray-300 hover:bg-gray-100 disabled:opacity-40"
+                            onclick="changeLogPage(@(Model.Page + 1))" @(Model.Page >=
+                                                                                                   Math.Max((int)Math.Ceiling(Model.TotalItems / (double)Model.PageSize), 1) ||
+                                                                                                   Model.TotalItems == 0 ? "disabled" : null)>
+                            Next
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+</div>
+
+<!-- Hidden pagination form -->
+<form id="logPaginationForm" method="get" class="hidden">
+    <input type="hidden" name="search" value="@Model.Search" />
+    <input type="hidden" name="from" value="@(Model.From?.ToString("yyyy-MM-dd"))" />
+    <input type="hidden" name="to" value="@(Model.To?.ToString("yyyy-MM-dd"))" />
+    <input type="hidden" id="logPageInput" name="page" value="@Model.Page" />
+    <input type="hidden" id="logPageSizeInput" name="pageSize" value="@Model.PageSize" />
+</form>
+
+@section Scripts {
+    <script>
+        const logForm = document.getElementById('logPaginationForm');
+        const logPageInput = document.getElementById('logPageInput');
+        const logPageSizeInput = document.getElementById('logPageSizeInput');
+        const logPageSizeSelect = document.getElementById('logPageSizeSelect');
+
+        window.changeLogPage = (page) => {
+            if (!logForm) return;
+            logPageInput.value = Math.max(1, Number(page) || 1);
+            logForm.submit();
+        };
+
+        logPageSizeSelect?.addEventListener('change', (e) => {
+            logPageSizeInput.value = e.target.value;
+            logPageInput.value = '1';
+            logForm.submit();
+        });
+    </script>
+}

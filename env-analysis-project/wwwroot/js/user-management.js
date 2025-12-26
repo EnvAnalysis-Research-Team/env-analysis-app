@@ -69,6 +69,11 @@
 
         try {
             const payload = await loadUserDetails(id);
+            const isDeleted = Boolean(payload?.isDeleted ?? payload?.IsDeleted);
+            if (isDeleted) {
+                alert('This user has been deleted. Restore the user before editing.');
+                return;
+            }
             const assignValue = (inputId, value) => {
                 const el = document.getElementById(inputId);
                 if (el) el.value = value ?? '';
@@ -166,7 +171,7 @@
 
     async function deleteUser(id) {
         if (!id) return;
-        if (!confirm('Are you sure you want to delete this user?')) return;
+        if (!confirm('This will mark the user as deleted. Continue?')) return;
 
         try {
             const res = await postJson('/UserManagement/Delete', { Id: id });
@@ -185,6 +190,30 @@
         } catch (error) {
             console.error(error);
             alert(error.message || 'Error while deleting user.');
+        }
+    }
+
+    async function restoreUser(id) {
+        if (!id) return;
+        if (!confirm('Restore this user?')) return;
+
+        try {
+            const res = await postJson('/UserManagement/Restore', { Id: id });
+            const result = await res.json();
+
+            if (res.ok && result?.success) {
+                alert(result.message || 'User restored successfully.');
+                window.location.reload();
+                return;
+            }
+
+            const errMessage = result?.message || result?.error || 'Failed to restore user.';
+            throw new Error(
+                result?.errors?.length ? `${errMessage}\n- ${result.errors.join('\n- ')}` : errMessage
+            );
+        } catch (error) {
+            console.error(error);
+            alert(error.message || 'Error while restoring user.');
         }
     }
 
@@ -207,6 +236,7 @@
     window.saveUserChanges = saveUserChanges;
     window.createUser = createUser;
     window.deleteUser = deleteUser;
+    window.restoreUser = restoreUser;
     window.openFilterModal = () => toggleFilterModal(true);
     window.closeFilterModal = () => toggleFilterModal(false);
 

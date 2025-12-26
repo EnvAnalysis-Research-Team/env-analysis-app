@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using env_analysis_project.Models;
 using env_analysis_project.Options;
 using env_analysis_project.Security;
+using env_analysis_project.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -32,17 +33,20 @@ namespace env_analysis_project.Areas.Identity.Pages.Account
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger<LoginModel> _logger;
+        private readonly IUserActivityLogger _activityLogger;
 
         public LoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
             IOptions<JwtOptions> jwtOptions,
-            ILogger<LoginModel> logger)
+            ILogger<LoginModel> logger,
+            IUserActivityLogger activityLogger)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _jwtOptions = jwtOptions.Value;
             _logger = logger;
+            _activityLogger = activityLogger;
         }
 
         /// <summary>
@@ -143,6 +147,7 @@ namespace env_analysis_project.Areas.Identity.Pages.Account
                     var token = await GenerateJwtTokenAsync(user);
                     SetAccessTokenCookie(token);
                     _logger.LogInformation("User logged in.");
+                    await _activityLogger.LogAsync("Auth.Login", "Identity", user.Id, $"User {user.Email} logged in.", null, user.Id);
                     return LocalRedirect(returnUrl);
                 }
                 if (result.RequiresTwoFactor)

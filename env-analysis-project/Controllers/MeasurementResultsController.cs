@@ -10,15 +10,18 @@ using Microsoft.EntityFrameworkCore;
 using env_analysis_project.Data;
 using env_analysis_project.Models;
 using env_analysis_project.Validators;
+using env_analysis_project.Services;
 
 namespace env_analysis_project.Controllers
 {
     public class MeasurementResultsController : Controller
     {
         private readonly env_analysis_projectContext _context;
-        public MeasurementResultsController(env_analysis_projectContext context)
+        private readonly IUserActivityLogger _activityLogger;
+        public MeasurementResultsController(env_analysis_projectContext context, IUserActivityLogger activityLogger)
         {
             _context = context;
+            _activityLogger = activityLogger;
         }
 
         public async Task<IActionResult> Manage()
@@ -544,6 +547,7 @@ namespace env_analysis_project.Controllers
 
             _context.MeasurementResult.Add(entity);
             await _context.SaveChangesAsync();
+            await LogAsync("MeasurementResult.Create", entity.ResultID.ToString(), $"Created measurement result for parameter {entity.ParameterCode}", new { entity.EmissionSourceID, entity.Value });
 
             var dto = await _context.MeasurementResult
                 .Include(m => m.EmissionSource)
@@ -614,6 +618,7 @@ namespace env_analysis_project.Controllers
             entity.type = NormalizeType(request.Type ?? entity.type);
 
             await _context.SaveChangesAsync();
+            await LogAsync("MeasurementResult.Update", entity.ResultID.ToString(), $"Updated measurement result for parameter {entity.ParameterCode}", new { entity.EmissionSourceID, entity.Value });
 
             var dto = await _context.MeasurementResult
                 .Include(m => m.EmissionSource)
@@ -637,6 +642,7 @@ namespace env_analysis_project.Controllers
 
             _context.MeasurementResult.Remove(entity);
             await _context.SaveChangesAsync();
+            await LogAsync("MeasurementResult.Delete", id.ToString(), $"Deleted measurement result for parameter {entity.ParameterCode}", new { entity.EmissionSourceID });
 
             return Ok(ApiResponse.Success<object?>(null, "Measurement result deleted successfully."));
         }
@@ -965,5 +971,8 @@ namespace env_analysis_project.Controllers
                 DateTimeStyles.None,
                 out month);
         }
+
+        private Task LogAsync(string action, string entityId, string description, object? metadata = null) =>
+            _activityLogger.LogAsync(action, "MeasurementResult", entityId, description, metadata);
     }
 }

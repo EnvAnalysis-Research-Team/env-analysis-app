@@ -3,79 +3,83 @@
     ViewData["Title"] = "Parameter Management";
 }
 
-<div class="max-w-8xl mx-auto bg-white shadow-sm rounded-md p-6 space-y-6">
-        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-1">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
-            <h1 class="text-sm font-semibold text-gray-700">Parameters</h1>
+<div class="max-w-8xl mx-auto p-4 space-y-6 w-full h-full">
+    <section class="w-full bg-white shadow-sm rounded-md py-4 px-6 text-xs space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <h1 class="text-lg font-semibold text-gray-800">Parameters</h1>
+                <p class="text-xs text-gray-500">Manage parameter definitions, units and descriptions.</p>
+            </div>
             <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
                 <input id="parameterSearchInput"
-                       type="text"
-                       placeholder="Search parameter..."
-                       class="text-xs border border-gray-300 rounded-md px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none w-full sm:w-64" />
+                    type="text"
+                    placeholder="Search parameter..."
+                    class="text-xs border border-gray-300 rounded-md px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none w-full sm:w-60" />
                 <button id="openAddParameterBtn"
-                        type="button"
-                        class="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-md transition">
-                    <i class="bi bi-plus text-[11px]"></i>
+                    type="button"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1.5 rounded-md transition inline-flex items-center gap-1">
+                    <i class="bi bi-plus text-[10px]"></i>
                     Add
                 </button>
                 <button id="exportParameterBtn"
-                        type="button"
-                        class="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-md transition">
-                    <i class="bi bi-download text-[11px]"></i>
+                    type="button"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1.5 rounded-md transition inline-flex items-center gap-1">
+                    <i class="bi bi-download text-[10px]"></i>
                     Export
                 </button>
             </div>
         </div>
-        <table class="w-full text-xs text-left table-auto">
-            <thead class="bg-gray-100 text-gray-700">
-                <tr>
-                    <th class="px-3 py-2">Code</th>
-                    <th class="px-3 py-2">Name</th>
-                    <th class="px-3 py-2">Unit</th>
-                    <th class="px-3 py-2">Standard</th>
-                    <th class="px-3 py-2 w-64">Description</th>
-                    <th class="px-3 py-2">Created</th>
-                    <th class="px-3 py-2">Updated</th>
-                    <th class="px-3 py-2 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="parameterTableBody" class="divide-y divide-gray-200">
-                <tr>
-                    <td colspan="9" class="px-3 py-6 text-center text-gray-400">Loading parameters...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="pt-3 border-t border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-[11px] text-gray-600">
-        <div id="parameterPaginationInfo">
-            Showing 0 of 0 parameters
+        <div class="overflow-x-auto border border-gray-200 rounded-md">
+            <table class="min-w-full text-left text-gray-700">
+                <thead class="bg-gray-100 text-gray-600">
+                    <tr>
+                        <th class="px-4 py-2 font-semibold">Code</th>
+                        <th class="px-4 py-2 font-semibold">Name</th>
+                        <th class="px-4 py-2 font-semibold">Unit</th>
+                        <th class="px-4 py-2 font-semibold">Standard</th>
+                        <th class="px-4 py-2 font-semibold w-64">Description</th>
+                        <th class="px-4 py-2 font-semibold">Created</th>
+                        <th class="px-4 py-2 font-semibold">Updated</th>
+                        <th class="px-4 py-2 font-semibold text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="parameterTableBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="9" class="px-4 py-6 text-center text-gray-400">Loading parameters...</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-            <label class="flex items-center gap-2 text-xs">
-                <span class="text-gray-500">Rows per page</span>
-                <select id="parameterPageSizeSelect"
+        <div class="pt-3 border-t border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-[11px] text-gray-600">
+            <div id="parameterPaginationInfo">
+                Showing 0 of 0 parameters
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <label class="flex items-center gap-2 text-xs">
+                    <span class="text-gray-500">Rows per page</span>
+                    <select id="parameterPageSizeSelect"
                         class="border border-gray-300 rounded-sm px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:outline-none">
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                </select>
-            </label>
-            <div class="flex items-center gap-3">
-                <span id="parameterPageIndicator">Page 1 of 1</span>
-                <div class="inline-flex border border-gray-300 rounded-md overflow-hidden">
-                    <button type="button" id="parameterPrevPage"
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </label>
+                <div class="flex items-center gap-3">
+                    <span id="parameterPageIndicator">Page 1 of 1</span>
+                    <div class="inline-flex border border-gray-300 rounded-md overflow-hidden">
+                        <button type="button" id="parameterPrevPage"
                             class="px-3 py-1.5 text-xs text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
-                        Prev
-                    </button>
-                    <button type="button" id="parameterNextPage"
+                            Prev
+                        </button>
+                        <button type="button" id="parameterNextPage"
                             class="px-3 py-1.5 text-xs text-gray-600 border-l border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition">
-                        Next
-                    </button>
+                            Next
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 
 <!-- Add Parameter Modal -->

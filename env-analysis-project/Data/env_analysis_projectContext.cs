@@ -16,9 +16,10 @@ namespace env_analysis_project.Data
         {
         }
 
-        public DbSet<env_analysis_project.Models.EmissionSource> EmissionSource { get; set; } = default!;
-        public DbSet<env_analysis_project.Models.MeasurementResult> MeasurementResult { get; set; } = default!;
-        public DbSet<env_analysis_project.Models.Parameter> Parameter { get; set; } = default!;
-        public DbSet<env_analysis_project.Models.SourceType> SourceType { get; set; } = default!;
+        public DbSet<EmissionSource> EmissionSource { get; set; } = default!;
+        public DbSet<MeasurementResult> MeasurementResult { get; set; } = default!;
+        public DbSet<Parameter> Parameter { get; set; } = default!;
+        public DbSet<SourceType> SourceType { get; set; } = default!;
+        public DbSet<UserActivityLog> UserActivityLogs { get; set; } = default!;
     }
 }

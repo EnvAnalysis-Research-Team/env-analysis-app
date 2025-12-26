@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using env_analysis_project.Models;
 using env_analysis_project.Validators;
+using env_analysis_project.Services;
 
 namespace env_analysis_project.Controllers
 {
@@ -16,19 +17,24 @@ namespace env_analysis_project.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IUserActivityLogger _activityLogger;
 
-        public UserManagementController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+        public UserManagementController(UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole> roleManager,
+            IUserActivityLogger activityLogger)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _activityLogger = activityLogger;
         }
 
-        public IActionResult Index(string? searchString, string? roleFilter, string? sortOption, int page = 1, int pageSize = 10)
+        public IActionResult Index(string? searchString, string? roleFilter, string? sortOption, string? statusFilter, int page = 1, int pageSize = 10)
         {
             page = Math.Max(page, 1);
             pageSize = Math.Clamp(pageSize, 5, 100);
+            var normalizedStatus = NormalizeStatusFilter(statusFilter);
 
-            var query = BuildUserQuery(searchString, roleFilter, sortOption);
+            var query = BuildUserQuery(searchString, roleFilter, sortOption, normalizedStatus);
             var totalItems = query.Count();
             var totalPages = totalItems == 0 ? 1 : (int)Math.Ceiling(totalItems / (double)pageSize);
             if (totalItems > 0 && page > totalPages)
@@ -55,14 +61,15 @@ namespace env_analysis_project.Controllers
             ViewBag.PageSize = pageSize;
             ViewBag.TotalItems = totalItems;
             ViewBag.TotalPages = Math.Max(totalPages, 1);
+            ViewBag.StatusFilter = normalizedStatus;
 
             return View("Manage", users);
         }
 
         [HttpGet]
-        public IActionResult Export(string? searchString, string? roleFilter, string? sortOption)
+        public IActionResult Export(string? searchString, string? roleFilter, string? sortOption, string? statusFilter)
         {
-            var users = BuildUserQuery(searchString, roleFilter, sortOption).ToList();
+            var users = BuildUserQuery(searchString, roleFilter, sortOption, NormalizeStatusFilter(statusFilter)).ToList();
             var csvBuilder = new StringBuilder();
             csvBuilder.AppendLine("Full Name,Email,Role,Created At,Updated At");
 
@@ -117,7 +124,9 @@ namespace env_analysis_project.Controllers
                 Role = string.IsNullOrWhiteSpace(request.Role) ? null : request.Role.Trim(),
                 PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim(),
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false,
+                DeletedAt = null
             };
 
             var createResult = await _userManager.CreateAsync(user, request.Password!);
@@ -132,6 +141,7 @@ namespace env_analysis_project.Controllers
                 await EnsureRoleAssignmentAsync(user, user.Role);
             }
 
+            await LogActivityAsync("User.Create", user.Id, $"Created user {user.Email}", new { user.FullName, user.Role });
             return HandleSuccess(ToDto(user), "User created successfully.");
         }
 
@@ -177,6 +187,10 @@ namespace env_analysis_project.Controllers
             {
                 return HandleNotFound();
             }
+            if (user.IsDeleted)
+            {
+                return HandleFailure(new[] { "Cannot update a deleted user. Please restore the user first." }, "Update failed.");
+            }
 
             user.Email = request.Email?.Trim();
             user.UserName = request.Email?.Trim();
@@ -204,6 +218,7 @@ namespace env_analysis_project.Controllers
                 }
             }
 
+            await LogActivityAsync("User.Update", user.Id, $"Updated user {user.Email}", new { user.FullName, user.Role });
             return HandleSuccess(ToDto(user), "User updated successfully.");
         }
 
@@ -222,14 +237,59 @@ namespace env_analysis_project.Controllers
                 return HandleNotFound();
             }
 
-            var result = await _userManager.DeleteAsync(user);
+            if (user.IsDeleted)
+            {
+                return HandleFailure(new[] { "User has already been deleted." }, "Invalid request.");
+            }
+
+            user.IsDeleted = true;
+            user.DeletedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
             {
                 var errors = result.Errors.Select(error => error.Description).ToList();
                 return HandleFailure(errors, "Failed to delete user.");
             }
 
+            await LogActivityAsync("User.Delete", user.Id, $"Soft deleted user {user.Email}");
             return HandleSuccess(new { request.Id }, "User deleted successfully.");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore([FromBody] RestoreUserRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Id))
+            {
+                return HandleFailure(new[] { "User identifier is required." }, "Invalid request.");
+            }
+
+            var user = await _userManager.FindByIdAsync(request.Id);
+            if (user == null)
+            {
+                return HandleNotFound();
+            }
+
+            if (!user.IsDeleted)
+            {
+                return HandleFailure(new[] { "User is already active." }, "Invalid request.");
+            }
+
+            user.IsDeleted = false;
+            user.DeletedAt = null;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(error => error.Description).ToList();
+                return HandleFailure(errors, "Failed to restore user.");
+            }
+
+            await LogActivityAsync("User.Restore", user.Id, $"Restored user {user.Email}");
+            return HandleSuccess(new { request.Id }, "User restored successfully.");
         }
 
         private bool IsAjaxRequest()
@@ -299,7 +359,18 @@ namespace env_analysis_project.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private IQueryable<ApplicationUser> BuildUserQuery(string? searchString, string? roleFilter, string? sortOption)
+        private static string NormalizeStatusFilter(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return "all";
+            }
+
+            var normalized = status.Trim().ToLowerInvariant();
+            return normalized is "active" or "deleted" or "all" ? normalized : "all";
+        }
+
+        private IQueryable<ApplicationUser> BuildUserQuery(string? searchString, string? roleFilter, string? sortOption, string statusFilter)
         {
             var query = _userManager.Users.AsQueryable();
 
@@ -316,13 +387,29 @@ namespace env_analysis_project.Controllers
                 query = query.Where(user => user.Role == roleFilter);
             }
 
-            return sortOption switch
+            query = statusFilter switch
+            {
+                "active" => query.Where(user => !user.IsDeleted),
+                "deleted" => query.Where(user => user.IsDeleted),
+                _ => query
+            };
+
+            var ordered = sortOption switch
             {
                 "date_asc" => query.OrderBy(user => user.CreatedAt),
                 "name_asc" => query.OrderBy(user => user.FullName),
                 "name_desc" => query.OrderByDescending(user => user.FullName),
                 _ => query.OrderByDescending(user => user.CreatedAt)
             };
+
+            if (statusFilter == "all")
+            {
+                ordered = ordered
+                    .OrderBy(user => user.IsDeleted ? 1 : 0)
+                    .ThenByDescending(user => user.CreatedAt);
+            }
+
+            return ordered;
         }
 
         private static string EscapeCsv(string? value)
@@ -335,6 +422,9 @@ namespace env_analysis_project.Controllers
             var sanitized = value.Replace("\"", "\"\"");
             return $"\"{sanitized}\"";
         }
+
+        private Task LogActivityAsync(string actionType, string? entityId, string? description, object? metadata = null) =>
+            _activityLogger.LogAsync(actionType, "User", entityId, description, metadata);
 
         private static ApplicationUser ToApplicationUser(CreateUserRequest request) =>
             new()
@@ -362,7 +452,9 @@ namespace env_analysis_project.Controllers
                 Role = user.Role,
                 PhoneNumber = user.PhoneNumber,
                 CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt
+                UpdatedAt = user.UpdatedAt,
+                IsDeleted = user.IsDeleted,
+                DeletedAt = user.DeletedAt
             };
 
         public sealed class UserResponse
@@ -374,6 +466,8 @@ namespace env_analysis_project.Controllers
             public string? PhoneNumber { get; set; }
             public DateTime? CreatedAt { get; set; }
             public DateTime? UpdatedAt { get; set; }
+            public bool IsDeleted { get; set; }
+            public DateTime? DeletedAt { get; set; }
         }
 
         public sealed class CreateUserRequest
@@ -394,6 +488,11 @@ namespace env_analysis_project.Controllers
         }
 
         public sealed class DeleteUserRequest
+        {
+            public string? Id { get; set; }
+        }
+
+        public sealed class RestoreUserRequest
         {
             public string? Id { get; set; }
         }

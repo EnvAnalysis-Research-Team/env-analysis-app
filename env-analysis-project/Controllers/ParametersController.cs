@@ -10,16 +10,19 @@ using Microsoft.EntityFrameworkCore;
 using env_analysis_project.Data;
 using env_analysis_project.Models;
 using env_analysis_project.Validators;
+using env_analysis_project.Services;
 
 namespace env_analysis_project.Controllers
 {
     public class ParametersController : Controller
     {
         private readonly env_analysis_projectContext _context;
+        private readonly IUserActivityLogger _activityLogger;
 
-        public ParametersController(env_analysis_projectContext context)
+        public ParametersController(env_analysis_projectContext context, IUserActivityLogger activityLogger)
         {
             _context = context;
+            _activityLogger = activityLogger;
         }
 
         // GET: Parameters
@@ -291,7 +294,7 @@ namespace env_analysis_project.Controllers
 
             _context.Parameter.Add(entity);
             await _context.SaveChangesAsync();
-
+            await LogAsync("Parameter.Create", entity.ParameterCode, $"Created parameter {entity.ParameterName}");
             return Ok(ApiResponse.Success(ToDto(entity), "Parameter created successfully."));
         }
 
@@ -323,7 +326,7 @@ namespace env_analysis_project.Controllers
             parameter.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-
+            await LogAsync("Parameter.Update", parameter.ParameterCode, $"Updated parameter {parameter.ParameterName}");
             return Ok(ApiResponse.Success(ToDto(parameter), "Parameter updated successfully."));
         }
 
@@ -350,7 +353,7 @@ namespace env_analysis_project.Controllers
             parameter.IsDeleted = true;
             parameter.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
-
+            await LogAsync("Parameter.Delete", parameter.ParameterCode, $"Deleted parameter {parameter.ParameterName}");
             return Ok(ApiResponse.Success(ToDto(parameter), "Parameter deleted successfully."));
         }
 
@@ -377,7 +380,7 @@ namespace env_analysis_project.Controllers
             parameter.IsDeleted = false;
             parameter.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
-
+            await LogAsync("Parameter.Restore", parameter.ParameterCode, $"Restored parameter {parameter.ParameterName}");
             return Ok(ApiResponse.Success(ToDto(parameter), "Parameter restored successfully."));
         }
 
@@ -434,5 +437,8 @@ namespace env_analysis_project.Controllers
             var sanitized = value.Replace("\"", "\"\"");
             return $"\"{sanitized}\"";
         }
+
+        private Task LogAsync(string action, string entityId, string description) =>
+            _activityLogger.LogAsync(action, "Parameter", entityId, description);
     }
 }

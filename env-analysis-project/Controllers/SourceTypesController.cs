@@ -7,16 +7,19 @@ using Microsoft.EntityFrameworkCore;
 using env_analysis_project.Data;
 using env_analysis_project.Models;
 using env_analysis_project.Validators;
+using env_analysis_project.Services;
 
 namespace env_analysis_project.Controllers
 {
     public class SourceTypesController : Controller
     {
         private readonly env_analysis_projectContext _context;
+        private readonly IUserActivityLogger _activityLogger;
 
-        public SourceTypesController(env_analysis_projectContext context)
+        public SourceTypesController(env_analysis_projectContext context, IUserActivityLogger activityLogger)
         {
             _context = context;
+            _activityLogger = activityLogger;
         }
 
         // ========== Views ==========
@@ -143,6 +146,7 @@ namespace env_analysis_project.Controllers
 
             _context.SourceType.Add(sourceType);
             await _context.SaveChangesAsync();
+            await LogAsync("SourceType.Create", sourceType.SourceTypeID.ToString(), $"Created source type {sourceType.SourceTypeName}");
 
             if (IsAjaxRequest())
             {
@@ -186,6 +190,7 @@ namespace env_analysis_project.Controllers
 
             _context.Update(existing);
             await _context.SaveChangesAsync();
+            await LogAsync("SourceType.Update", existing.SourceTypeID.ToString(), $"Updated source type {existing.SourceTypeName}");
 
             return Ok(ApiResponse.Success(ToDto(existing), "Source type updated successfully."));
         }
@@ -200,6 +205,7 @@ namespace env_analysis_project.Controllers
                 sourceType.IsDeleted = true;
                 sourceType.UpdatedAt = DateTime.Now;
                 await _context.SaveChangesAsync();
+                await LogAsync("SourceType.Delete", sourceType.SourceTypeID.ToString(), $"Deleted source type {sourceType.SourceTypeName}");
             }
 
             if (IsAjaxRequest())
@@ -255,5 +261,8 @@ namespace env_analysis_project.Controllers
             public DateTime? UpdatedAt { get; set; }
             public int? EmissionSourceCount { get; set; }
         }
+
+        private Task LogAsync(string action, string entityId, string description) =>
+            _activityLogger.LogAsync(action, "SourceType", entityId, description);
     }
 }

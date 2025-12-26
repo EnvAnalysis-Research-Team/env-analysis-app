@@ -11,6 +11,7 @@ using env_analysis_project.Data;
 using env_analysis_project.Models;
 using env_analysis_project.Options;
 using env_analysis_project.Security;
+using env_analysis_project.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +24,9 @@ builder.Services.AddDbContext<env_analysis_projectContext>(options =>
         builder.Configuration.GetConnectionString("env_analysis_projectContext")
         ?? throw new InvalidOperationException("Connection string 'env_analysis_projectContext' not found."))
 );
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IUserActivityLogger, UserActivityLogger>();
 
 // ======================================
 // Cấu hình Identity

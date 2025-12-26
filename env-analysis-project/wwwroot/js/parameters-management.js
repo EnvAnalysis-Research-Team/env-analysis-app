@@ -150,7 +150,7 @@
                 <td class="px-3 py-2">${row.parameterName ?? ''}</td>
                 <td class="px-3 py-2">${row.unit ?? '-'}</td>
                 <td class="px-3 py-2">${row.standardValue ?? '-'}</td>
-                <td class="px-3 py-2 text-sm text-gray-600">${row.description ?? '-'}</td>
+                <td class="px-3 py-2 text-xs text-gray-600">${row.description ?? '-'}</td>
                 <td class="px-3 py-2 text-xs text-gray-500">${formatDate(row.createdAt)}</td>
                 <td class="px-3 py-2 text-xs text-gray-500">${formatDate(row.updatedAt)}</td>
                 <td class="px-3 py-2 text-center">

@@ -5,6 +5,10 @@
     var selectedRoleFilter = Context.Request.Query["roleFilter"].ToString();
     var selectedSortOption = Context.Request.Query["sortOption"].ToString();
     var searchValue = Context.Request.Query["searchString"].ToString();
+    var statusFilterQuery = Context.Request.Query["statusFilter"].ToString();
+    var selectedStatusFilter = string.IsNullOrWhiteSpace(statusFilterQuery)
+        ? (ViewBag.StatusFilter as string ?? "all")
+        : statusFilterQuery;
 }
 @model IEnumerable<env_analysis_project.Models.ApplicationUser>
 
@@ -21,13 +25,13 @@
     var endItem = totalItems == 0 ? 0 : Math.Min(currentPage * currentPageSize, totalItems);
 }
 
-<div class="max-w-7xl mx-auto bg-white shadow-sm rounded-md py-4 px-6 text-xs space-y-4">
+<div class="max-w-8xl mx-auto p-4 space-y-6 w-full h-full">
+    <section class="w-full bg-white shadow-sm rounded-md py-4 px-6 text-xs space-y-4">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <!-- Left: Title -->
         <div>
             <h1 class="text-lg font-semibold text-gray-800">Account Management</h1>
-            <p class="text-xs text-gray-500">
-            </p>
+            <p class="text-xs text-gray-500">Manage users, roles, and account states.</p>
         </div>
 
         <!-- Right: Actions -->
@@ -66,6 +70,7 @@
                     <th class="px-4 py-2 font-semibold">Email</th>
                     <th class="px-4 py-2 font-semibold">Role</th>
                     <th class="px-4 py-2 font-semibold">Created At</th>
+                    <th class="px-4 py-2 font-semibold">Updated At</th>
                     <th class="px-4 py-2 font-semibold text-center">Actions</th>
                 </tr>
             </thead>
@@ -74,23 +79,36 @@
                 {
                     foreach (var user in Model)
                     {
-                        <tr class="hover:bg-gray-50 transition">
+                        var rowClass = user.IsDeleted ? "bg-red-200/70" : "hover:bg-gray-50 transition";
+                        <tr class="@rowClass">
                             <td class="px-4 py-2">@user.FullName</td>
                             <td class="px-4 py-2">@user.Email</td>
                             <td class="px-4 py-2">@user.Role</td>
                             <td class="px-4 py-2">@user.CreatedAt?.ToString("yyyy-MM-dd")</td>
+                            <td class="px-4 py-2">@user.UpdatedAt?.ToString("yyyy-MM-dd")</td>
                             <td class="px-4 py-2 text-center">
                                 <div class="flex items-center justify-center gap-2">
-                                    <button type="button" onclick="openEditModal('@user.Id')"
-                                        class="w-7 h-7 flex items-center justify-center border border-blue-300 text-blue-600 rounded-md hover:bg-blue-50 transition"
-                                        title="View & Edit User">
-                                        <i class="bi bi-pencil text-[10px]"></i>
-                                    </button>
-                                    <button type="button" onclick="deleteUser('@user.Id')"
-                                        class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition"
-                                        title="Delete User">
-                                        <i class="bi bi-trash text-[10px]"></i>
-                                    </button>
+                                    @if (!user.IsDeleted)
+                                    {
+                                        <button type="button" onclick="openEditModal('@user.Id')"
+                                            class="w-7 h-7 flex items-center justify-center border border-blue-300 text-blue-600 rounded-md hover:bg-blue-50 transition"
+                                            title="View details">
+                                            <i class="bi bi-eye text-[10px]"></i>
+                                        </button>
+                                        <button type="button" onclick="deleteUser('@user.Id')"
+                                            class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition"
+                                            title="Soft Delete User">
+                                            <i class="bi bi-trash text-[10px]"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" onclick="restoreUser('@user.Id')"
+                                            class="w-7 h-7 flex items-center justify-center border border-green-400 text-green-600 rounded-md hover:bg-green-50 transition"
+                                            title="Restore User">
+                                            <i class="bi bi-arrow-clockwise text-[10px]"></i>
+                                        </button>
+                                    }
                                 </div>
                             </td>
                         </tr>
@@ -99,7 +117,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="5" class="px-4 py-4 text-center text-gray-400">
+                        <td colspan="6" class="px-4 py-4 text-center text-gray-400">
                             No users found.
                         </td>
                     </tr>
@@ -143,12 +161,14 @@
             </div>
         </div>
     </div>
+</section>
 </div>
 
 <form id="paginationForm" method="get" class="hidden">
     <input type="hidden" name="searchString" value="@searchValue" />
     <input type="hidden" name="roleFilter" value="@selectedRoleFilter" />
     <input type="hidden" name="sortOption" value="@selectedSortOption" />
+    <input type="hidden" name="statusFilter" value="@selectedStatusFilter" />
     <input type="hidden" name="page" value="@currentPage" />
     <input type="hidden" name="pageSize" value="@currentPageSize" />
 </form>
@@ -187,6 +207,27 @@
                     {
                         var isSelected = string.Equals(selectedRoleFilter, role, StringComparison.OrdinalIgnoreCase);
                         <option value="@role" selected="@(isSelected ? "selected" : null)">@role</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Status</label>
+                <select name="statusFilter"
+                    class="w-full border border-gray-300 rounded-sm px-3 py-1.5 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    @{
+                        var statusOptions = new[] { "active", "deleted", "all" };
+                    }
+                    @foreach (var status in statusOptions)
+                    {
+                        var isSelected = string.Equals(selectedStatusFilter, status, StringComparison.OrdinalIgnoreCase);
+                        var label = status switch
+                        {
+                            "deleted" => "Deleted users",
+                            "all" => "All users",
+                            _ => "Active users"
+                        };
+                        <option value="@status" selected="@(isSelected ? "selected" : null)">@label</option>
                     }
                 </select>
             </div>

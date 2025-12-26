@@ -5,16 +5,19 @@ using Microsoft.EntityFrameworkCore;
 using env_analysis_project.Data;
 using env_analysis_project.Models;
 using env_analysis_project.Validators;
+using env_analysis_project.Services;
 
 namespace env_analysis_project.Controllers
 {
     public class EmissionSourcesController : Controller
     {
         private readonly env_analysis_projectContext _context;
+        private readonly IUserActivityLogger _activityLogger;
 
-        public EmissionSourcesController(env_analysis_projectContext context)
+        public EmissionSourcesController(env_analysis_projectContext context, IUserActivityLogger activityLogger)
         {
             _context = context;
+            _activityLogger = activityLogger;
         }
 
         // =============================
@@ -77,7 +80,7 @@ namespace env_analysis_project.Controllers
             _context.EmissionSource.Add(model);
             await _context.SaveChangesAsync();
             await _context.Entry(model).Reference(e => e.SourceType).LoadAsync();
-
+            await LogAsync("EmissionSource.Create", model.EmissionSourceID.ToString(), $"Created source {model.SourceName}");
             return Ok(ApiResponse.Success(ToDto(model), "Emission source created successfully!"));
         }
 
@@ -115,7 +118,7 @@ namespace env_analysis_project.Controllers
 
             await _context.SaveChangesAsync();
             await _context.Entry(existing).Reference(e => e.SourceType).LoadAsync();
-
+            await LogAsync("EmissionSource.Update", existing.EmissionSourceID.ToString(), $"Updated source {existing.SourceName}");
             return Ok(ApiResponse.Success(ToDto(existing), "Emission source updated successfully!"));
         }
 
@@ -141,7 +144,7 @@ namespace env_analysis_project.Controllers
             emissionSource.IsDeleted = true;
             emissionSource.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
-
+            await LogAsync("EmissionSource.Delete", emissionSource.EmissionSourceID.ToString(), $"Deleted source {emissionSource.SourceName}");
             return Ok(ApiResponse.Success(new { request.Id }, "Emission source deleted successfully!"));
         }
 
@@ -169,7 +172,7 @@ namespace env_analysis_project.Controllers
             emissionSource.IsDeleted = false;
             emissionSource.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
-
+            await LogAsync("EmissionSource.Restore", emissionSource.EmissionSourceID.ToString(), $"Restored source {emissionSource.SourceName}");
             return Ok(ApiResponse.Success(new { request.Id }, "Emission source restored successfully!"));
         }
 
@@ -235,5 +238,8 @@ namespace env_analysis_project.Controllers
         {
             public int Id { get; set; }
         }
+
+        private Task LogAsync(string action, string? entityId, string? description) =>
+            _activityLogger.LogAsync(action, "EmissionSource", entityId, description);
     }
 }

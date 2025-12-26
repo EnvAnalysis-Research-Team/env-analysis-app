@@ -56,6 +56,11 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
 
     <script>
         window.authState = {
@@ -76,7 +81,7 @@
 <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
 
     <header class="bg-white shadow-sm">
-        <nav class="max-w-7xl mx-auto flex items-center p-4">
+        <nav class="max-w-8xl mx-auto flex items-center p-4">
 
             <!-- Logo / Title -->
             <a class="text-md font-bold text-blue-800" asp-area="" asp-controller="Home" asp-action="Index">
@@ -99,7 +104,7 @@
                     </button>
 
                     <!-- Dropdown menu -->
-                    <div x-show="open" x-transition class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
+                    <div x-show="open" x-transition x-cloak class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
                         <a asp-controller="SourceManagement" asp-action="Manage"
                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-black">
                             Source Management
@@ -123,6 +128,9 @@
 
                 <a class="hover:text-black transition" asp-controller="UserManagement" asp-action="Index">
                     Account Management
+                </a>
+                <a class="hover:text-black transition" asp-controller="SystemLog" asp-action="Manage">
+                    System Log
                 </a>
             </ul>
 
@@ -171,7 +179,7 @@
 
     @if (showAccessDeniedBanner)
     {
-        <div class="max-w-7xl mx-auto mt-4 px-4">
+        <div class="max-w-8xl mx-auto mt-4 px-4">
             <div role="alert"
                  class="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
                 <div>
@@ -181,12 +189,12 @@
         </div>
     }
 
-    <main role="main" class="flex-grow container mx-auto py-4 max-w-7xl">
+    <main role="main" class="flex-grow container mx-auto max-w-8xl">
         @RenderBody()
     </main>
 
     <footer class="bg-white border-t border-gray-200 text-gray-700 py-6 mt-24">
-        <div class="container max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between px-4 space-y-3 md:space-y-0">
+        <div class="container max-w-8xl mx-auto flex flex-col md:flex-row items-center justify-between px-4 space-y-3 md:space-y-0">
 
             <!-- Bản quyền -->
             <div class="text-sm text-center md:text-left">
@@ -195,10 +203,6 @@
 
             <!-- Liên kết mạng xã hội -->
             <div class="flex space-x-5 text-xl">
-                <a href="https://www.facebook.com/nguyen.khanh.201930" target="_blank"
-                   class="hover:text-blue-600 transition-colors duration-200">
-                    <i class="bi bi-facebook"></i>
-                </a>
                 <a href="https://github.com/KhanhNguyenVimaru/env-analysis" target="_blank"
                    class="hover:text-gray-800 transition-colors duration-200">
                     <i class="bi bi-github"></i>
