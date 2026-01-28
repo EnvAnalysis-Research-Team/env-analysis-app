@@ -21,5 +21,12 @@ namespace env_analysis_project.Data
         public DbSet<Parameter> Parameter { get; set; } = default!;
         public DbSet<SourceType> SourceType { get; set; } = default!;
         public DbSet<UserActivityLog> UserActivityLogs { get; set; } = default!;
+        public DbSet<LatestParameterMeasurementRecord> LatestParameterMeasurementRecords { get; set; } = default!;
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<LatestParameterMeasurementRecord>().HasNoKey().ToView(null);
+        }
     }
 }

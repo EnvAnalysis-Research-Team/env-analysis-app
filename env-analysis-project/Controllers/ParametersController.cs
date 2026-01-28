@@ -252,6 +252,72 @@ namespace env_analysis_project.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> LatestMeasurementValues()
+        {
+            const string sql = """
+WITH LatestMeasurement AS (
+    SELECT
+        mr.ResultID,
+        mr.ParameterCode,
+        mr.MeasurementDate,
+        mr.EntryDate,
+        mr.Value,
+        mr.Unit,
+        mr.EmissionSourceID,
+        p.ParameterName,
+        p.StandardValue,
+        p.Type,
+        ROW_NUMBER() OVER (
+            PARTITION BY mr.ParameterCode
+            ORDER BY
+                mr.MeasurementDate DESC,
+                mr.EntryDate DESC,
+                mr.ResultID DESC
+        ) AS rn
+    FROM MeasurementResult mr
+    INNER JOIN Parameter p
+        ON mr.ParameterCode = p.ParameterCode
+    WHERE p.IsDeleted = 0
+)
+SELECT
+    ResultID,
+    ParameterCode,
+    MeasurementDate,
+    EntryDate,
+    Value,
+    Unit,
+    EmissionSourceID,
+    ParameterName,
+    StandardValue,
+    Type
+FROM LatestMeasurement
+WHERE rn = 1
+ORDER BY ParameterName;
+""";
+
+            var records = await _context.LatestParameterMeasurementRecords
+                .FromSqlRaw(sql)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var latestMeasurements = records
+                .Select(record => new LatestParameterMeasurementDto
+                {
+                    ParameterCode = record.ParameterCode,
+                    ParameterName = record.ParameterName,
+                    Unit = record.Unit,
+                    Value = record.Value,
+                    MeasurementDate = record.MeasurementDate == default(DateTime)
+                        ? record.EntryDate
+                        : record.MeasurementDate
+                })
+                .OrderBy(dto => dto.ParameterName)
+                .ToList();
+
+            return Ok(ApiResponse.Success(latestMeasurements));
+        }
+
+        [HttpGet]
         public async Task<IActionResult> DetailData(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -433,6 +499,15 @@ namespace env_analysis_project.Controllers
             public DateTime? CreatedAt { get; set; }
             public DateTime? UpdatedAt { get; set; }
             public bool IsDeleted { get; set; }
+        }
+
+        private sealed class LatestParameterMeasurementDto
+        {
+            public string ParameterCode { get; init; } = string.Empty;
+            public string ParameterName { get; init; } = string.Empty;
+            public string? Unit { get; init; }
+            public double? Value { get; init; }
+            public DateTime? MeasurementDate { get; init; }
         }
 
         private static string EscapeCsv(string? value)

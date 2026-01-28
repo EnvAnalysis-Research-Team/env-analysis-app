@@ -22,13 +22,13 @@
                             <p class="text-sm font-semibold text-gray-800">Parameter trends</p>
                             <p class="text-xs text-gray-500">Select a parameter.</p>
                         </div>
-                        <div class="inline-flex border border-gray-200 overflow-hidden text-xs font-medium">
+                        <div class="flex gap-2 border-b border-gray-200 text-xs font-medium">
                             <button type="button" data-trend-tab="water"
-                                class="trend-tab-btn px-3 py-1.5 border-r border-gray-200 text-gray-600 hover:bg-gray-100 w-24">
+                                class="trend-tab-btn px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-blue-600">
                                 Water
                             </button>
                             <button type="button" data-trend-tab="air"
-                                class="trend-tab-btn px-3 py-1.5 bg-blue-600 text-white w-24">
+                                class="trend-tab-btn px-4 py-2 -mb-px border-b-2 border-blue-600 text-blue-600">
                                 Air
                             </button>
                         </div>
@@ -72,7 +72,7 @@
             </div>
             <div class="lg:w-3/4 w-full">
                 <div class="relative h-72">
-                    <canvas id="parameterTrendChart" class="absolute inset-0 w-full h-full invisible"></canvas>
+                    <div id="parameterTrendChart" class="absolute inset-0 w-full h-full invisible"></div>
                     <div id="trendChartPlaceholder"
                         class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm text-center px-6">
                         Select parameter(s) to generate the chart.
@@ -693,5 +693,6 @@
             canApprove: @User.IsInRole("Admin").ToString().ToLowerInvariant()
             };
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="~/js/measurement-results-management.js" asp-append-version="true"></script>
 }

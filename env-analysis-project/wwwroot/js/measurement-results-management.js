@@ -51,8 +51,11 @@
         trendTablePrev: document.getElementById('trendTablePrev'),
         trendTableNext: document.getElementById('trendTableNext'),
         trendTablePageSize: document.getElementById('trendTablePageSize'),
-        trendChartCanvas: document.getElementById('parameterTrendChart'),
+        trendChartContainer: document.getElementById('parameterTrendChart'),
         trendChartPlaceholder: document.getElementById('trendChartPlaceholder'),
+        latestMeasurementsBody: document.getElementById('latestMeasurementsBody'),
+        latestMeasurementsCount: document.getElementById('latestMeasurementsCount'),
+        latestMeasurementsUpdated: document.getElementById('latestMeasurementsUpdated'),
         paginationBar: document.getElementById('resultsPaginationBar'),
         paginationSummary: document.getElementById('resultsPaginationSummary'),
         paginationPageLabel: document.getElementById('resultsPaginationPageLabel'),
@@ -217,7 +220,7 @@
         }
     };
 
-    const trendColorPalette = ['#2563eb', '#f97316', '#10b981', '#ef4444', '#8b5cf6', '#14b8a6'];
+    const trendColorPalette = ['#1d4ed8', '#2563eb', '#0ea5e9', '#14b8a6', '#22c55e', '#64748b', '#475569'];
 
     const unwrapApiResponse = (json) => {
         if (!json || typeof json !== 'object') return json;
@@ -469,11 +472,11 @@
         elements.trendTabButtons.forEach(button => {
             const target = normalizeParameterType(button?.dataset?.trendTab);
             const isActive = target === normalizeParameterType(trend.activeType);
-            button.classList.toggle('bg-blue-600', isActive);
-            button.classList.toggle('text-white', isActive);
-            button.classList.toggle('text-gray-600', !isActive);
-            button.classList.toggle('bg-white', !isActive);
-            button.classList.toggle('hover:bg-gray-100', !isActive);
+            button.classList.toggle('border-blue-600', isActive);
+            button.classList.toggle('text-blue-600', isActive);
+            button.classList.toggle('border-transparent', !isActive);
+            button.classList.toggle('text-gray-500', !isActive);
+            button.classList.toggle('hover:text-blue-600', !isActive);
         });
     };
 
@@ -552,9 +555,9 @@
     };
 
     const toggleTrendPlaceholder = (hasData) => {
-        if (!elements.trendChartPlaceholder || !elements.trendChartCanvas) return;
+        if (!elements.trendChartPlaceholder || !elements.trendChartContainer) return;
         elements.trendChartPlaceholder.classList.toggle('hidden', hasData);
-        elements.trendChartCanvas.classList.toggle('invisible', !hasData);
+        elements.trendChartContainer.classList.toggle('invisible', !hasData);
     };
 
     const clearTrendChart = () => {
@@ -566,7 +569,8 @@
     };
 
     const renderTrendChart = (payload) => {
-        if (!elements.trendChartCanvas) return;
+        const chartContainer = elements.trendChartContainer;
+        if (!chartContainer || typeof ApexCharts === 'undefined') return;
         if (trend.chart) {
             trend.chart.destroy();
             trend.chart = null;
@@ -574,60 +578,72 @@
 
         const labels = payload?.labels ?? [];
         const series = payload?.series ?? [];
-        if (!labels.length || !series.length) {
+        if (!series.length) {
+            toggleTrendPlaceholder(false);
+            return;
+        }
+
+        const dataSeries = series.map((item, index) => {
+            const baseColor = trendColorPalette[index % trendColorPalette.length];
+            const datasetLabelBase = item.parameterName || item.parameterCode || `Series ${index + 1}`;
+            const datasetLabel = item.unit ? `${datasetLabelBase} (${item.unit})` : datasetLabelBase;
+            const points = Array.isArray(item.points) ? item.points : [];
+            const data = points.map(point => {
+                const xValue = point?.measurementDate ?? point?.label ?? point?.timestamp ?? null;
+                return {
+                    x: xValue,
+                    y: toNumericOrNull(point?.value)
+                };
+            });
+            return { name: datasetLabel, data, color: baseColor };
+        }).filter(seriesItem => seriesItem.data.length > 0);
+
+        if (!dataSeries.length) {
             toggleTrendPlaceholder(false);
             return;
         }
 
         toggleTrendPlaceholder(true);
-        const ctx = elements.trendChartCanvas.getContext('2d');
-        const datasets = [];
 
-        series.forEach((item, index) => {
-            const baseColor = trendColorPalette[index % trendColorPalette.length];
-            const values = item.points.map(point => point.value);
-            const datasetLabelBase = item.parameterName || item.parameterCode || `Series ${index + 1}`;
-            const datasetLabel = item.unit ? `${datasetLabelBase} (${item.unit})` : datasetLabelBase;
-
-            datasets.push({
-                label: datasetLabel,
-                data: values,
-                borderColor: baseColor,
-                backgroundColor: hexToRgba(baseColor, 0.2),
-                tension: 0.3,
-                radius: 3,
-                pointRadius: 3,
-                fill: false
-            });
-        });
-
-        trend.chart = new Chart(ctx, {
-            type: 'line',
-            data: { labels, datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: {
-                        labels: { usePointStyle: true }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => `${context.dataset.label}: ${formatNumericValue(context.parsed.y)}`
-                        }
-                    }
+        const options = {
+            series: dataSeries,
+            chart: {
+                height: 350,
+                type: 'line',
+                zoom: { enabled: false }
+            },
+            dataLabels: { enabled: false },
+            stroke: { curve: 'straight', width: 3 },
+            grid: {
+                row: {
+                    colors: ['#f3f3f3', 'transparent'],
+                    opacity: 0.5
                 },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        ticks: {
-                            callback: (value) => formatNumericValue(value)
-                        }
-                    }
+                borderColor: '#e5e7eb',
+                strokeDashArray: 4
+            },
+            xaxis: {
+                type: 'datetime',
+                axisBorder: { show: false },
+                axisTicks: { show: true }
+            },
+            yaxis: {
+                min: 0,
+                labels: {
+                    formatter: (value) => formatNumericValue(value)
                 }
-            }
-        });
+            },
+            tooltip: {
+                x: { format: 'dd MMM yyyy HH:mm' },
+                y: { formatter: (value) => formatNumericValue(value) }
+            },
+            markers: { size: 5, strokeWidth: 3, hover: { size: 7 } },
+            colors: dataSeries.map(seriesItem => seriesItem.color),
+            legend: { position: 'top', horizontalAlign: 'center' }
+        };
+
+        trend.chart = new ApexCharts(chartContainer, options);
+        trend.chart.render();
     };
 
     const updateTrendTableControls = (tablePayload, statusMessage) => {
@@ -755,6 +771,70 @@
         }
     };
 
+    const renderLatestMeasurements = (items) => {
+        if (!elements.latestMeasurementsBody) return;
+        if (!Array.isArray(items) || items.length === 0) {
+            elements.latestMeasurementsBody.innerHTML = `
+                <tr>
+                    <td colspan="2" class="px-3 py-5 text-center text-gray-400">No latest readings found.</td>
+                </tr>`;
+            if (elements.latestMeasurementsCount) {
+                elements.latestMeasurementsCount.textContent = '0 parameters';
+            }
+            if (elements.latestMeasurementsUpdated) {
+                elements.latestMeasurementsUpdated.textContent = 'Updated: --';
+            }
+            return;
+        }
+
+        const rows = items.map(item => {
+            const name = escapeHtml(item?.parameterName || item?.parameterCode || '-');
+            const unit = item?.unit ? ` ${escapeHtml(item.unit)}` : '';
+            const value = formatNumericValue(item?.value);
+            const dateText = formatDate(item?.measurementDate);
+            return `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-3 py-2">
+                        <div class="font-medium text-gray-800">${name}</div>
+                        <div class="text-[11px] text-gray-500">${dateText}</div>
+                    </td>
+                    <td class="px-3 py-2 text-right text-gray-700 font-semibold">${value}${unit}</td>
+                </tr>
+            `;
+        });
+
+        elements.latestMeasurementsBody.innerHTML = rows.join('');
+        if (elements.latestMeasurementsCount) {
+            const count = items.length;
+            elements.latestMeasurementsCount.textContent = `${count} ${count === 1 ? 'parameter' : 'parameters'}`;
+        }
+        if (elements.latestMeasurementsUpdated) {
+            elements.latestMeasurementsUpdated.textContent = `Updated: ${formatDate(new Date())}`;
+        }
+    };
+
+    const loadLatestMeasurements = async () => {
+        if (!elements.latestMeasurementsBody || !routes.latest) return;
+        elements.latestMeasurementsBody.innerHTML = `
+            <tr>
+                <td colspan="2" class="px-3 py-5 text-center text-gray-400">Loading latest values...</td>
+            </tr>`;
+        try {
+            const res = await fetch(routes.latest, { credentials: 'same-origin' });
+            if (!res.ok) await handleErrorResponse(res);
+            const json = await res.json();
+            if (json?.success === false) throw new Error(json?.message || 'Failed to load latest values.');
+            const payload = unwrapApiResponse(json) || [];
+            renderLatestMeasurements(payload);
+        } catch (error) {
+            console.error(error);
+            elements.latestMeasurementsBody.innerHTML = `
+                <tr>
+                    <td colspan="2" class="px-3 py-5 text-center text-red-500">${error.message || 'Failed to load latest values.'}</td>
+                </tr>`;
+        }
+    };
+
     const setTrendTab = (type) => {
         const normalized = normalizeParameterType(type);
         if (trend.activeType === normalized) {
@@ -854,6 +934,7 @@
         });
 
         loadParameterTrends();
+        loadLatestMeasurements();
     };
 
     const sanitizeTab = (tab) => (TAB_KEYS.includes(tab) ? tab : 'all');
