@@ -51,6 +51,7 @@ namespace env_analysis_project.Controllers
                     Code = p.ParameterCode,
                     Label = p.ParameterName,
                     Unit = p.Unit,
+                    StandardValue = p.StandardValue,
                     Type = ParameterTypeHelper.Normalize(p.Type)
                 })
                 .ToListAsync();
@@ -372,8 +373,6 @@ namespace env_analysis_project.Controllers
             var isMultiParameterRequest = normalizedCodes.Count > 1;
 
             const int MaxMonths = 36;
-            const int DefaultTablePageSize = 12;
-            const int AlternateTablePageSize = 6;
             var now = DateTime.UtcNow;
             var defaultEnd = new DateTime(now.Year, now.Month, 1);
             var defaultStart = defaultEnd.AddMonths(-11);
@@ -430,6 +429,7 @@ namespace env_analysis_project.Controllers
                     Code = p.ParameterCode,
                     Label = p.ParameterName,
                     Unit = p.Unit,
+                    StandardValue = p.StandardValue,
                     Type = ParameterTypeHelper.Normalize(p.Type)
                 })
                 .ToListAsync();
@@ -593,29 +593,16 @@ namespace env_analysis_project.Controllers
                 ? firstMeta
                 : null;
 
-            var totalItems = tablePoints.Count;
-            var normalizedPageSize = pageSize == AlternateTablePageSize ? AlternateTablePageSize : DefaultTablePageSize;
-            if (normalizedPageSize <= 0)
-            {
-                normalizedPageSize = DefaultTablePageSize;
-            }
-            var totalPages = Math.Max(1, (int)Math.Ceiling(Math.Max(totalItems, 0) / (double)normalizedPageSize));
-            var safePage = Math.Min(Math.Max(page, 1), totalPages);
-            var tableItems = tablePoints
-                .Skip((safePage - 1) * normalizedPageSize)
-                .Take(normalizedPageSize)
-                .ToArray();
-
             var table = new TrendTablePage
             {
                 Unit = !isMultiParameterRequest ? defaultMetadata?.Unit : null,
-                Items = tableItems,
+                Items = tablePoints.ToArray(),
                 Pagination = new PaginationMetadata
                 {
-                    Page = safePage,
-                    PageSize = normalizedPageSize,
-                    TotalItems = totalItems,
-                    TotalPages = totalPages
+                    Page = 1,
+                    PageSize = tablePoints.Count,
+                    TotalItems = tablePoints.Count,
+                    TotalPages = 1
                 },
                 SourceId = sourceId
             };
@@ -624,7 +611,8 @@ namespace env_analysis_project.Controllers
             {
                 Labels = labels,
                 Series = series,
-                Table = table
+                Table = table,
+                StandardValue = !isMultiParameterRequest ? defaultMetadata?.StandardValue : null
             };
 
             return Ok(ApiResponse.Success(response));
@@ -973,6 +961,7 @@ namespace env_analysis_project.Controllers
             public string Code { get; set; } = string.Empty;
             public string Label { get; set; } = string.Empty;
             public string? Unit { get; set; }
+            public double? StandardValue { get; set; }
             public string Type { get; set; } = "water";
         }
 
@@ -1069,6 +1058,7 @@ namespace env_analysis_project.Controllers
             public IReadOnlyList<string> Labels { get; init; } = Array.Empty<string>();
             public IReadOnlyList<ParameterTrendSeries> Series { get; init; } = Array.Empty<ParameterTrendSeries>();
             public TrendTablePage Table { get; init; } = new TrendTablePage();
+            public double? StandardValue { get; init; }
         }
 
         private sealed class ParameterTrendSeries

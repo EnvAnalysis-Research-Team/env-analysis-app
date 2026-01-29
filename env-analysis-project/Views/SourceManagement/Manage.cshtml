@@ -6,19 +6,28 @@
 }
 
 <div class="max-w-full mx-auto p-4 space-y-6 w-full h-full">
-    <section class="w-full bg-white border border-gray-200 rounded p-4 space-y-4 text-xs">
-        <div class="grid grid-cols-1 lg:grid-cols-8 gap-4 w-full">
-            <div class="col-span-1 lg:col-span-2 order-2 lg:order-1 bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col shadow-sm space-y-3">
-                <div class="flex items-start justify-between gap-3">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full h-full">
+        <div class="lg:col-span-1 h-full">
+            <div class="w-full bg-white border border-gray-200 rounded-md shadow-sm p-4 space-y-3 text-xs">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h2 class="text-sm font-semibold text-gray-700">Source Type</h2>
-                        <p class="text-[11px] text-gray-500">Quick overview of types and total sources.</p>
+                        <p class="text-[11px] text-gray-500">Sources snapshot.</p>
                     </div>
-                    <button type="button" id="openAddTypeModalBtn"
-                        class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-medium px-3 py-1.5 rounded-md transition inline-flex items-center gap-1">
-                        <i class="bi bi-plus text-[10px]"></i>
-                        Add
-                    </button>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                        <input id="sourceTypeSearchInput" type="text" placeholder="Filter types..."
+                            class="text-[11px] border border-gray-300 rounded-md px-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none w-full sm:w-40" />
+                        <button type="button" id="sourceTypeSearchReset"
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-[11px] font-medium px-3 py-1.5 rounded-md transition inline-flex items-center gap-1">
+                            <i class="bi bi-arrow-clockwise text-[10px]"></i>
+                            Reset
+                        </button>
+                        <button type="button" id="openAddTypeModalBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-medium px-3 py-1.5 rounded-md transition inline-flex items-center gap-1">
+                            <i class="bi bi-plus text-[10px]"></i>
+                            Add
+                        </button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto border border-gray-200 rounded-md">
                     <table id="sourceTypeTable" class="min-w-full text-left text-gray-700">
@@ -26,6 +35,7 @@
                             <tr>
                                 <th class="px-3 py-2 font-semibold">Type</th>
                                 <th class="px-3 py-2 text-center font-semibold">Number</th>
+                                <th class="px-3 py-2 text-center font-semibold">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="sourceTypeTbody" class="divide-y divide-gray-200">
@@ -39,6 +49,20 @@
                                     data-count="@count">
                                     <td class="px-3 py-2 truncate" title="@name">@name</td>
                                     <td class="px-3 py-2 text-center font-medium">@count</td>
+                                    <td class="px-3 py-2 text-center">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <button type="button"
+                                                class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition"
+                                                title="View Details" data-id="@id">
+                                                <i class="bi bi-eye text-[10px]"></i>
+                                            </button>
+                                            <button type="button"
+                                                class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition delete-type-btn"
+                                                data-id="@id" data-name="@name" title="Delete Source Type">
+                                                <i class="bi bi-trash text-[10px]"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             }
 
@@ -46,7 +70,7 @@
                                                         false))
                             {
                                 <tr id="noSourceTypesRow">
-                                    <td colspan="2" class="px-4 py-4 text-center text-gray-400 text-[11px]">
+                                    <td colspan="3" class="px-4 py-4 text-center text-gray-400 text-[11px]">
                                         No source types found.
                                     </td>
                                 </tr>
@@ -57,11 +81,14 @@
             </div>
 
             <!-- EMISSION SOURCE TABLE -->
-            <div class="col-span-1 lg:col-span-6 order-1 lg:order-2 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm space-y-4">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <div>
-                        <h2 class="text-sm font-semibold text-gray-700">Emission Sources</h2>
-                        <p class="text-[11px] text-gray-500">Search, manage and export emission sources.</p>
+        </div>
+
+        <!-- EMISSION SOURCE TABLE -->
+        <section class="lg:col-span-3 w-full h-full bg-white border border-gray-200 rounded-md shadow-sm p-4 space-y-4 text-xs">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-700">Emission Sources</h2>
+                    <p class="text-[11px] text-gray-500">Search, manage and export emission sources.</p>
                     </div>
                     <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                         <input id="emissionSearchInput"
@@ -186,8 +213,8 @@
                     </table>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+    </div>
 </div>
 
     <!-- MODAL: Add Source Type -->

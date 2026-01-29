@@ -255,45 +255,45 @@ namespace env_analysis_project.Controllers
         public async Task<IActionResult> LatestMeasurementValues()
         {
             const string sql = """
-WITH LatestMeasurement AS (
-    SELECT
-        mr.ResultID,
-        mr.ParameterCode,
-        mr.MeasurementDate,
-        mr.EntryDate,
-        mr.Value,
-        mr.Unit,
-        mr.EmissionSourceID,
-        p.ParameterName,
-        p.StandardValue,
-        p.Type,
-        ROW_NUMBER() OVER (
-            PARTITION BY mr.ParameterCode
-            ORDER BY
-                mr.MeasurementDate DESC,
-                mr.EntryDate DESC,
-                mr.ResultID DESC
-        ) AS rn
-    FROM MeasurementResult mr
-    INNER JOIN Parameter p
-        ON mr.ParameterCode = p.ParameterCode
-    WHERE p.IsDeleted = 0
-)
-SELECT
-    ResultID,
-    ParameterCode,
-    MeasurementDate,
-    EntryDate,
-    Value,
-    Unit,
-    EmissionSourceID,
-    ParameterName,
-    StandardValue,
-    Type
-FROM LatestMeasurement
-WHERE rn = 1
-ORDER BY ParameterName;
-""";
+                WITH LatestMeasurement AS (
+                    SELECT
+                        mr.ResultID,
+                        mr.ParameterCode,
+                        mr.MeasurementDate,
+                        mr.EntryDate,
+                        mr.Value,
+                        mr.Unit,
+                        mr.EmissionSourceID,
+                        p.ParameterName,
+                        p.StandardValue,
+                        p.Type,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY mr.ParameterCode
+                            ORDER BY
+                                mr.MeasurementDate DESC,
+                                mr.EntryDate DESC,
+                                mr.ResultID DESC
+                        ) AS rn
+                    FROM MeasurementResult mr
+                    INNER JOIN Parameter p
+                        ON mr.ParameterCode = p.ParameterCode
+                    WHERE p.IsDeleted = 0
+                )
+                SELECT
+                    ResultID,
+                    ParameterCode,
+                    MeasurementDate,
+                    EntryDate,
+                    Value,
+                    Unit,
+                    EmissionSourceID,
+                    ParameterName,
+                    StandardValue,
+                    Type
+                FROM LatestMeasurement
+                WHERE rn = 1
+                ORDER BY ParameterName;
+                """;
 
             var records = await _context.Set<LatestParameterMeasurementRecord>()
                 .FromSqlRaw(sql)
@@ -315,6 +315,39 @@ ORDER BY ParameterName;
                 .ToList();
 
             return Ok(ApiResponse.Success(latestMeasurements));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LatestMeasurementByCode(string code, int? sourceId)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return BadRequest(ApiResponse.Fail<List<ParameterMeasurementValueDto>>("Parameter code is required."));
+            }
+
+            var normalizedCode = code.Trim();
+            var records = await _context.MeasurementResult
+                .Where(result => result.ParameterCode == normalizedCode)
+                .Where(result => !sourceId.HasValue || result.EmissionSourceID == sourceId.Value)
+                .OrderByDescending(result => result.MeasurementDate)
+                .Select(result => new ParameterMeasurementValueDto
+                {
+                    ParameterCode = result.ParameterCode,
+                    MeasurementDate = result.MeasurementDate,
+                    Value = result.Value,
+                    Unit = result.Unit,
+                    EmissionSourceId = result.EmissionSourceID,
+                    EmissionSourceName = result.EmissionSource.SourceName
+                })
+                .AsNoTracking()
+                .ToListAsync();
+
+            if (records.Count == 0)
+            {
+                return NotFound(ApiResponse.Fail<List<ParameterMeasurementValueDto>>("No measurement data found for this parameter."));
+            }
+
+            return Ok(ApiResponse.Success(records));
         }
 
         [HttpGet]
@@ -508,6 +541,16 @@ ORDER BY ParameterName;
             public string? Unit { get; init; }
             public double? Value { get; init; }
             public DateTime? MeasurementDate { get; init; }
+        }
+
+        private sealed class ParameterMeasurementValueDto
+        {
+            public string ParameterCode { get; init; } = string.Empty;
+            public DateTime MeasurementDate { get; init; }
+            public double? Value { get; init; }
+            public string? Unit { get; init; }
+            public int EmissionSourceId { get; init; }
+            public string? EmissionSourceName { get; init; }
         }
 
         private static string EscapeCsv(string? value)

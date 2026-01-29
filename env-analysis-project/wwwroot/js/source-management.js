@@ -168,7 +168,7 @@
             tbody.innerHTML = '';
             const items = Array.isArray(list) ? list : [];
             if (!items.length) {
-                tbody.innerHTML = '<tr><td colspan="2" class="px-2 py-3 text-center text-xs text-gray-400">No source types found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" class="px-2 py-3 text-center text-xs text-gray-400">No source types found.</td></tr>';
                 return;
             }
 
@@ -183,9 +183,43 @@
                 tr.innerHTML = `
                     <td class="px-2 py-2 truncate" title="${escapeHtml(tr.dataset.name)}">${escapeHtml(tr.dataset.name)}</td>
                     <td class="px-2 py-2 text-center font-medium">${escapeHtml(tr.dataset.count)}</td>
+                    <td class="px-2 py-2 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button type="button"
+                                class="w-7 h-7 flex items-center justify-center border border-blue-300 rounded-md text-blue-600 hover:bg-blue-100 transition source-type-view-btn"
+                                title="View Details" data-id="${escapeHtml(tr.dataset.id)}">
+                                <i class="bi bi-eye text-[10px]"></i>
+                            </button>
+                            <button type="button"
+                                class="w-7 h-7 flex items-center justify-center border border-red-400 text-red-500 rounded-md hover:bg-red-50 transition delete-type-btn"
+                                data-id="${escapeHtml(tr.dataset.id)}" data-name="${escapeHtml(tr.dataset.name)}" title="Delete Source Type">
+                                <i class="bi bi-trash text-[10px]"></i>
+                            </button>
+                        </div>
+                    </td>
                 `;
                 tr.addEventListener('click', onSourceTypeRowClick);
                 tbody.appendChild(tr);
+            });
+
+            tbody.querySelectorAll('.source-type-view-btn').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const row = btn.closest('tr');
+                    if (!row) return;
+                    onSourceTypeRowClick({ currentTarget: row });
+                });
+            });
+
+            tbody.querySelectorAll('.delete-type-btn').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const row = btn.closest('tr');
+                    if (!row) return;
+                    onSourceTypeRowClick({ currentTarget: row });
+                });
             });
         } catch (error) {
             console.error(error);

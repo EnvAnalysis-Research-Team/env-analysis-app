@@ -1,27 +1,23 @@
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using env_analysis_project.Data;
-using env_analysis_project.Models;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using env_analysis_project.Data;
+using env_analysis_project.Models;
 
 namespace env_analysis_project.Controllers
 {
-    public class HomeController : Controller
+    public class AlertsForecastsController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
         private readonly env_analysis_projectContext _context;
 
-        public HomeController(ILogger<HomeController> logger, env_analysis_projectContext context)
+        public AlertsForecastsController(env_analysis_projectContext context)
         {
-            _logger = logger;
             _context = context;
         }
 
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
+            ViewData["Title"] = "Alerts & Forecasts";
             var emissionSources = await _context.EmissionSource
                 .Where(s => !s.IsDeleted)
                 .OrderBy(s => s.SourceName)
@@ -49,13 +45,6 @@ namespace env_analysis_project.Controllers
             ViewBag.Parameters = parameters;
 
             return View();
-        }
-
-        [AllowAnonymous]
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }

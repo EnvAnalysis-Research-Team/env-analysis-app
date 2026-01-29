@@ -4,6 +4,7 @@
     const routes = window.measurementResultRoutes || {};
     const lookups = window.measurementResultLookups || { emissionSources: [], parameters: [] };
     const permissions = window.measurementResultPermissions || { canApprove: false };
+    const config = window.measurementResultConfig || { latestMode: 'list' };
 
     const getAntiForgeryToken = () =>
         document.querySelector('#measurementResultsAntiForgery input[name="__RequestVerificationToken"]')?.value || '';
@@ -45,6 +46,7 @@
         trendFilterEnd: document.getElementById('trendFilterEnd'),
         trendFilterReset: document.getElementById('trendFilterReset'),
         trendFilterSource: document.getElementById('trendFilterSource'),
+        trendLimitToggle: document.getElementById('trendLimitToggle'),
         trendTableBody: document.getElementById('trendTableBody'),
         trendTableSummary: document.getElementById('trendTableSummary'),
         trendTablePageLabel: document.getElementById('trendTablePageLabel'),
@@ -60,6 +62,11 @@
         latestMeasurementsCount: document.getElementById('latestMeasurementsCount'),
         latestMeasurementsUpdated: document.getElementById('latestMeasurementsUpdated'),
         latestMeasurementsSearch: document.getElementById('latestMeasurementsSearch'),
+        latestMeasurementSelect: document.getElementById('latestMeasurementSelect'),
+        latestMeasurementSourceSelect: document.getElementById('latestMeasurementSourceSelect'),
+        latestMeasurementListBody: document.getElementById('latestMeasurementListBody'),
+        latestMeasurementCount: document.getElementById('latestMeasurementCount'),
+        latestMeasurementStatus: document.getElementById('latestMeasurementStatus'),
         paginationBar: document.getElementById('resultsPaginationBar'),
         paginationSummary: document.getElementById('resultsPaginationSummary'),
         paginationPageLabel: document.getElementById('resultsPaginationPageLabel'),
@@ -132,7 +139,7 @@
     };
 
     const TAB_KEYS = ['all', 'water', 'air'];
-    const DEFAULT_PAGE_SIZE = 10;
+    const DEFAULT_PAGE_SIZE = 20;
     const loadingMessages = {
         all: 'Loading measurements...',
         water: 'Loading water measurements...',
@@ -208,6 +215,8 @@
         activeType: 'air',
         chart: null,
         groupedChart: null,
+        showLimitLine: true,
+        lastPayload: null,
         filter: {
             startMonth: null,
             endMonth: null,
@@ -216,6 +225,7 @@
         table: {
             page: 1,
             pageSize: 12,
+            allItems: [],
             pagination: {
                 page: 1,
                 pageSize: 12,
@@ -504,14 +514,15 @@
     const configureTrendSelectDisplay = (optionCount) => {
         if (!elements.trendSelect) return;
         const isWater = normalizeParameterType(trend.activeType) === 'water';
-        elements.trendSelect.multiple = isWater;
-        if (isWater) {
+        const forceSingleWater = elements.trendSelect?.dataset?.singleWater === 'true';
+        elements.trendSelect.multiple = isWater && !forceSingleWater;
+        if (isWater && !forceSingleWater) {
             elements.trendSelect.size = Math.min(Math.max(optionCount, 4), 8);
         } else {
             elements.trendSelect.size = 1;
         }
         if (elements.trendSelectHint) {
-            elements.trendSelectHint.classList.toggle('hidden', !isWater);
+            elements.trendSelectHint.classList.toggle('hidden', !isWater || forceSingleWater);
         }
     };
 
@@ -535,6 +546,17 @@
 
         if (normalizeParameterType(trend.activeType) === 'water') {
             const availableValues = new Set(items.map(item => item.code));
+            const forceSingleWater = elements.trendSelect?.dataset?.singleWater === 'true';
+            if (forceSingleWater) {
+                const fallback = items[0].code;
+                const selectedValue = trend.selectedCode && availableValues.has(trend.selectedCode)
+                    ? trend.selectedCode
+                    : fallback;
+                trend.selectedCode = selectedValue;
+                trend.selectedCodes = selectedValue ? [selectedValue] : [];
+                elements.trendSelect.value = selectedValue;
+                return;
+            }
             let selectedValues = trend.selectedCodes.filter(code => availableValues.has(code));
             if (!selectedValues.length) {
                 selectedValues = [items[0].code];
@@ -585,6 +607,13 @@
         if (!elements.trendGroupedPlaceholder || !elements.trendGroupedChartContainer) return;
         elements.trendGroupedPlaceholder.classList.toggle('hidden', hasData);
         elements.trendGroupedChartContainer.classList.toggle('invisible', !hasData);
+    };
+
+    const updateLimitToggleLabel = () => {
+        if (!elements.trendLimitToggle) return;
+        elements.trendLimitToggle.textContent = trend.showLimitLine ? 'Limit: On' : 'Limit: Off';
+        elements.trendLimitToggle.classList.toggle('text-blue-600', trend.showLimitLine);
+        elements.trendLimitToggle.classList.toggle('border-blue-300', trend.showLimitLine);
     };
 
     const getGroupedMode = () => {
@@ -644,6 +673,11 @@
         }
 
         toggleTrendPlaceholder(true);
+        const standardValue = toNumericOrNull(payload?.standardValue);
+        const shouldShowLimit = trend.showLimitLine && standardValue != null;
+        const seriesValues = dataSeries.flatMap(seriesItem => seriesItem.data.filter(value => value != null));
+        const maxSeriesValue = seriesValues.length ? Math.max(...seriesValues) : 0;
+        const yAxisMax = shouldShowLimit ? Math.max(maxSeriesValue, standardValue) : maxSeriesValue;
 
         const options = {
             series: dataSeries,
@@ -662,7 +696,11 @@
                 }
             },
             dataLabels: { enabled: false },
-            stroke: { curve: 'straight', width: 3 },
+            stroke: {
+                curve: 'straight',
+                width: dataSeries.map(seriesItem => seriesItem.isLimit ? 2 : 3),
+                dashArray: dataSeries.map(seriesItem => seriesItem.isLimit ? 6 : 0)
+            },
             grid: {
                 row: {
                     colors: ['#f3f3f3', 'transparent'],
@@ -679,6 +717,7 @@
             },
             yaxis: {
                 min: 0,
+                max: Number.isFinite(yAxisMax) && yAxisMax > 0 ? yAxisMax * 1.05 : undefined,
                 labels: {
                     formatter: (value) => formatNumericValue(value)
                 }
@@ -689,7 +728,23 @@
             },
             markers: { size: 5, strokeWidth: 3, hover: { size: 7 } },
             colors: dataSeries.map(seriesItem => seriesItem.color),
-            legend: { position: 'top', horizontalAlign: 'center' }
+            legend: { position: 'top', horizontalAlign: 'center' },
+            annotations: shouldShowLimit
+                ? {
+                    yaxis: [
+                        {
+                            y: standardValue,
+                            borderColor: '#ef4444',
+                            strokeDashArray: 6,
+                            label: {
+                                text: 'Limit',
+                                borderColor: '#ef4444',
+                                style: { color: '#fff', background: '#ef4444', fontSize: '11px' }
+                            }
+                        }
+                    ]
+                }
+                : undefined
         };
 
         trend.chart = new ApexCharts(chartContainer, options);
@@ -773,6 +828,12 @@
 
         toggleGroupedPlaceholder(true);
 
+        const standardValue = toNumericOrNull(payload?.standardValue);
+        const shouldShowLimit = trend.showLimitLine && standardValue != null;
+        const seriesValues = series.flatMap(seriesItem => seriesItem.data.filter(value => value != null));
+        const maxSeriesValue = seriesValues.length ? Math.max(...seriesValues) : 0;
+        const yAxisMax = shouldShowLimit ? Math.max(maxSeriesValue, standardValue) : maxSeriesValue;
+
         const options = {
             series,
             chart: {
@@ -793,6 +854,7 @@
             },
             yaxis: {
                 min: 0,
+                max: Number.isFinite(yAxisMax) && yAxisMax > 0 ? yAxisMax * 1.05 : undefined,
                 labels: {
                     formatter: (value) => formatNumericValue(value)
                 }
@@ -801,7 +863,23 @@
                 y: { formatter: (value) => formatNumericValue(value) }
             },
             colors: series.map(seriesItem => seriesItem.color),
-            legend: { position: 'top', horizontalAlign: 'center' }
+            legend: { position: 'top', horizontalAlign: 'center' },
+            annotations: shouldShowLimit
+                ? {
+                    yaxis: [
+                        {
+                            y: standardValue,
+                            borderColor: '#ef4444',
+                            strokeDashArray: 6,
+                            label: {
+                                text: 'Limit',
+                                borderColor: '#ef4444',
+                                style: { color: '#fff', background: '#ef4444', fontSize: '11px' }
+                            }
+                        }
+                    ]
+                }
+                : undefined
         };
 
         trend.groupedChart = new ApexCharts(chartContainer, options);
@@ -810,21 +888,19 @@
 
     const updateTrendTableControls = (tablePayload, statusMessage) => {
         if (!elements.trendTableSummary) return;
-        const pagination = tablePayload?.pagination ?? {
-            page: trend.table.page,
-            pageSize: trend.table.pageSize,
-            totalItems: 0,
-            totalPages: 1
+        const items = Array.isArray(tablePayload?.items) ? tablePayload.items : [];
+        const totalItems = items.length;
+        const pageSize = trend.table.pageSize;
+        const totalPages = Math.max(1, Math.ceil(Math.max(totalItems, 0) / Math.max(pageSize, 1)));
+        const currentPage = Math.min(Math.max(trend.table.page, 1), totalPages);
+
+        trend.table.page = currentPage;
+        trend.table.pagination = {
+            page: currentPage,
+            pageSize,
+            totalItems,
+            totalPages
         };
-
-        trend.table.pagination = pagination;
-        trend.table.page = pagination.page ?? trend.table.page;
-        trend.table.pageSize = pagination.pageSize ?? trend.table.pageSize;
-
-        const totalItems = pagination.totalItems ?? 0;
-        const currentPage = pagination.page ?? 1;
-        const pageSize = pagination.pageSize ?? trend.table.pageSize;
-        const totalPages = Math.max(pagination.totalPages ?? 1, 1);
 
         const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
         const end = totalItems === 0 ? 0 : Math.min(currentPage * pageSize, totalItems);
@@ -859,14 +935,21 @@
                 </td>
             </tr>`;
 
-        if (!tablePayload || !Array.isArray(tablePayload.items) || tablePayload.items.length === 0) {
+        const items = Array.isArray(tablePayload?.items) ? tablePayload.items : [];
+        if (!items.length) {
             elements.trendTableBody.innerHTML = emptyRow;
-            updateTrendTableControls(null);
+            updateTrendTableControls({ items: [] });
             return;
         }
 
         const unit = tablePayload.unit ?? '-';
-        const rows = tablePayload.items.map(point => `
+        const pageSize = trend.table.pageSize;
+        const totalPages = Math.max(1, Math.ceil(items.length / Math.max(pageSize, 1)));
+        const currentPage = Math.min(Math.max(trend.table.page, 1), totalPages);
+        trend.table.page = currentPage;
+        const pageItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+        const rows = pageItems.map(point => `
             <tr class="hover:bg-gray-50 transition">
                 <td class="px-3 py-2 whitespace-nowrap">${point.label}</td>
                 <td class="px-3 py-2">${point.parameterName ?? '-'}</td>
@@ -877,7 +960,7 @@
         `);
 
         elements.trendTableBody.innerHTML = rows.join('') || emptyRow;
-        updateTrendTableControls(tablePayload);
+        updateTrendTableControls({ items });
     };
 
     const buildTrendUrl = () => {
@@ -906,6 +989,8 @@
             renderTrendTable(null);
             clearTrendChart();
             clearGroupedBarChart();
+            trend.lastPayload = null;
+            trend.table.allItems = [];
             return;
         }
 
@@ -921,9 +1006,14 @@
             const json = await res.json();
             if (json?.success === false) throw new Error(json?.message || 'Failed to load trend data.');
             const payload = unwrapApiResponse(json);
+            trend.lastPayload = payload;
+            trend.table.allItems = Array.isArray(payload?.table?.items) ? payload.table.items : [];
             renderTrendChart(payload);
             renderGroupedBarChart(payload);
-            renderTrendTable(payload?.table);
+            renderTrendTable({
+                items: trend.table.allItems,
+                unit: payload?.table?.unit
+            });
         } catch (error) {
             console.error(error);
             clearTrendChart();
@@ -991,12 +1081,43 @@
     };
 
     const loadLatestMeasurements = async () => {
-        if (!elements.latestMeasurementsBody || !routes.latest) return;
+        if (!routes.latest || !elements.latestMeasurementsBody) return;
         elements.latestMeasurementsBody.innerHTML = `
             <tr>
                 <td colspan="2" class="px-3 py-5 text-center text-gray-400">Loading latest values...</td>
             </tr>`;
         try {
+            const latestMode = (config.latestMode || 'list').toLowerCase();
+            if (latestMode === 'bycode') {
+                const parameters = Array.isArray(lookups.parameters) ? lookups.parameters : [];
+                if (!parameters.length) {
+                    renderLatestMeasurements([]);
+                    return;
+                }
+
+                const requests = parameters.map(param => {
+                    const code = param?.code || param?.parameterCode;
+                    if (!code) return Promise.resolve(null);
+                    const url = `${routes.latest}${routes.latest.includes('?') ? '&' : '?'}code=${encodeURIComponent(code)}`;
+                    return fetch(url, { credentials: 'same-origin' })
+                        .then(async res => {
+                            if (!res.ok) return null;
+                            const json = await res.json();
+                            if (json?.success === false) return null;
+                            return unwrapApiResponse(json);
+                        })
+                        .catch(() => null);
+                });
+
+                const results = await Promise.all(requests);
+                const payload = results.filter(item => item);
+                renderLatestMeasurements(payload);
+                if (elements.latestMeasurementsSearch) {
+                    elements.latestMeasurementsSearch.oninput = () => renderLatestMeasurements(payload);
+                }
+                return;
+            }
+
             const res = await fetch(routes.latest, { credentials: 'same-origin' });
             if (!res.ok) await handleErrorResponse(res);
             const json = await res.json();
@@ -1012,6 +1133,130 @@
                 <tr>
                     <td colspan="2" class="px-3 py-5 text-center text-red-500">${error.message || 'Failed to load latest values.'}</td>
                 </tr>`;
+        }
+    };
+
+    const renderLatestByCode = (records) => {
+        if (!elements.latestMeasurementListBody) return;
+        const items = Array.isArray(records) ? records : [];
+        if (!items.length) {
+            elements.latestMeasurementListBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-3 py-5 text-center text-gray-400">
+                        No measurements found for this parameter.
+                    </td>
+                </tr>`;
+            if (elements.latestMeasurementCount) {
+                elements.latestMeasurementCount.textContent = '0 records';
+            }
+            if (elements.latestMeasurementStatus) {
+                elements.latestMeasurementStatus.textContent = 'No data found for this parameter.';
+            }
+            return;
+        }
+
+        const rows = items.map(item => {
+            const dateText = item?.measurementDate ? formatDate(item.measurementDate) : '--';
+            const sourceText = item?.emissionSourceName || '-';
+            const valueText = formatNumericValue(item?.value);
+            const unitText = item?.unit || '--';
+            return `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-3 py-2 text-gray-600">${dateText}</td>
+                    <td class="px-3 py-2 text-gray-600">${escapeHtml(sourceText)}</td>
+                    <td class="px-3 py-2 text-right text-gray-800 font-semibold">${valueText}</td>
+                    <td class="px-3 py-2 text-gray-600">${unitText}</td>
+                </tr>
+            `;
+        });
+
+        elements.latestMeasurementListBody.innerHTML = rows.join('');
+        if (elements.latestMeasurementCount) {
+            const count = items.length;
+            elements.latestMeasurementCount.textContent = `${count} ${count === 1 ? 'record' : 'records'}`;
+        }
+        if (elements.latestMeasurementStatus) {
+            elements.latestMeasurementStatus.textContent = 'Latest values loaded.';
+        }
+    };
+
+    const renderLatestParameterOptions = () => {
+        if (!elements.latestMeasurementSelect) return;
+        const items = Array.isArray(lookups.parameters) ? lookups.parameters : [];
+        const options = [
+            '<option value="">Select parameter</option>',
+            ...items.map(item => `<option value="${item.code}">${item.label}</option>`)
+        ];
+        elements.latestMeasurementSelect.innerHTML = options.join('');
+    };
+
+    const renderLatestSourceOptions = () => {
+        if (!elements.latestMeasurementSourceSelect) return;
+        const items = Array.isArray(lookups.emissionSources) ? lookups.emissionSources : [];
+        const options = [
+            '<option value="">All sources</option>',
+            ...items.map(item => `<option value="${item.id}">${item.label}</option>`)
+        ];
+        elements.latestMeasurementSourceSelect.innerHTML = options.join('');
+    };
+
+    const loadLatestByCode = async (code) => {
+        if (!routes.latest || !code) {
+            renderLatestByCode(null);
+            return;
+        }
+        const sourceIdValue = elements.latestMeasurementSourceSelect?.value || '';
+        if (elements.latestMeasurementStatus) {
+            elements.latestMeasurementStatus.textContent = 'Loading latest value...';
+        }
+        try {
+            const params = new URLSearchParams({ code });
+            if (sourceIdValue) {
+                params.set('sourceId', sourceIdValue);
+            }
+            const url = `${routes.latest}${routes.latest.includes('?') ? '&' : '?'}${params.toString()}`;
+            const res = await fetch(url, { credentials: 'same-origin' });
+            if (!res.ok) await handleErrorResponse(res);
+            const json = await res.json();
+            if (json?.success === false) throw new Error(json?.message || 'Failed to load latest value.');
+            const payload = unwrapApiResponse(json) || [];
+            renderLatestByCode(Array.isArray(payload) ? payload : []);
+        } catch (error) {
+            console.error(error);
+            renderLatestByCode([]);
+            if (elements.latestMeasurementStatus) {
+                elements.latestMeasurementStatus.textContent = error.message || 'Failed to load latest value.';
+            }
+        }
+    };
+
+    const initLatestByCode = () => {
+        if (!elements.latestMeasurementSelect) return;
+        if (!routes.latest) return;
+        if (!elements.latestMeasurementSelect.dataset.bound) {
+            renderLatestParameterOptions();
+            renderLatestSourceOptions();
+            elements.latestMeasurementSelect.addEventListener('change', (event) => {
+                const value = event.target.value || '';
+                loadLatestByCode(value);
+            });
+            elements.latestMeasurementSourceSelect?.addEventListener('change', () => {
+                const value = elements.latestMeasurementSelect?.value || '';
+                if (value) loadLatestByCode(value);
+            });
+            elements.latestMeasurementSelect.dataset.bound = 'true';
+        }
+        const selected = elements.latestMeasurementSelect.value || '';
+        if (selected) {
+            loadLatestByCode(selected);
+            return;
+        }
+        const firstOption = elements.latestMeasurementSelect.querySelector('option[value]:not([value=""])');
+        if (firstOption) {
+            elements.latestMeasurementSelect.value = firstOption.value;
+            loadLatestByCode(firstOption.value);
+        } else {
+            renderLatestByCode(null);
         }
     };
 
@@ -1038,10 +1283,16 @@
         if (!elements.trendSelect) return;
         trend.table.page = 1;
         if (normalizeParameterType(trend.activeType) === 'water') {
-            const selected = Array.from(elements.trendSelect.selectedOptions)
-                .map(option => option.value)
-                .filter(value => value);
-            trend.selectedCodes = selected;
+            if (elements.trendSelect?.multiple) {
+                const selected = Array.from(elements.trendSelect.selectedOptions)
+                    .map(option => option.value)
+                    .filter(value => value);
+                trend.selectedCodes = selected;
+            } else {
+                const value = elements.trendSelect.value || null;
+                trend.selectedCodes = value ? [value] : [];
+                trend.selectedCode = value;
+            }
         } else {
             trend.selectedCode = elements.trendSelect.value || null;
         }
@@ -1053,6 +1304,7 @@
     };
 
     const initTrendSection = () => {
+        updateLimitToggleLabel();
         if (elements.trendSelect) {
             renderTrendOptions();
             elements.trendSelect.addEventListener('change', () => {
@@ -1089,6 +1341,22 @@
         };
 
         elements.trendFilterForm?.addEventListener('submit', submitTrendFilter);
+        elements.trendLimitToggle?.addEventListener('click', () => {
+            const nextState = !trend.showLimitLine;
+            if (nextState && trend.lastPayload) {
+                const standardValue = toNumericOrNull(trend.lastPayload.standardValue);
+                if (standardValue == null) {
+                    alert('This parameter does not have a standard value.');
+                    return;
+                }
+            }
+            trend.showLimitLine = nextState;
+            updateLimitToggleLabel();
+            if (trend.lastPayload) {
+                renderTrendChart(trend.lastPayload);
+                renderGroupedBarChart(trend.lastPayload);
+            }
+        });
         elements.trendFilterReset?.addEventListener('click', () => {
             if (elements.trendFilterStart) elements.trendFilterStart.value = '';
             if (elements.trendFilterEnd) elements.trendFilterEnd.value = '';
@@ -1103,13 +1371,13 @@
         elements.trendTablePrev?.addEventListener('click', () => {
             if (trend.table.page <= 1) return;
             trend.table.page -= 1;
-            loadParameterTrends();
+            renderTrendTable({ items: trend.table.allItems, unit: trend.lastPayload?.table?.unit });
         });
 
         elements.trendTableNext?.addEventListener('click', () => {
             if (trend.table.page >= (trend.table.pagination.totalPages || 1)) return;
             trend.table.page += 1;
-            loadParameterTrends();
+            renderTrendTable({ items: trend.table.allItems, unit: trend.lastPayload?.table?.unit });
         });
 
         elements.trendTablePageSize?.addEventListener('change', (event) => {
@@ -1121,11 +1389,16 @@
             if (selected === trend.table.pageSize) return;
             trend.table.pageSize = selected;
             trend.table.page = 1;
-            loadParameterTrends();
+            renderTrendTable({ items: trend.table.allItems, unit: trend.lastPayload?.table?.unit });
         });
 
         loadParameterTrends();
-        loadLatestMeasurements();
+        const latestMode = (config.latestMode || 'list').toLowerCase();
+        if (latestMode === 'bycode') {
+            initLatestByCode();
+        } else {
+            loadLatestMeasurements();
+        }
     };
 
     const sanitizeTab = (tab) => (TAB_KEYS.includes(tab) ? tab : 'all');
@@ -1253,8 +1526,8 @@
 
         body.innerHTML = rows.map(result => {
             const statusBadge = result.isApproved
-                ? '<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-50 text-green-600">Approved</span>'
-                : '<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-yellow-50 text-yellow-600">Pending</span>';
+                ? '<span class="px-2 py-0.5 rounded-full text-[11px] font-medium text-green-600">Approved</span>'
+                : '<span class="px-2 py-0.5 rounded-full text-[11px] font-medium text-yellow-600">Pending</span>';
 
             const typeColumn = tab === 'all'
                 ? `<td class=\"px-3 py-2 capitalize\">${result.type}</td>`
@@ -2068,5 +2341,14 @@
     initTabs();
     initSelects();
     updateFilterBadge();
-    initTrendSection();
+    const shouldInitTrend = Boolean(
+        elements.trendSelect
+        || elements.trendChartContainer
+        || elements.trendTableBody
+        || elements.latestMeasurementsBody
+        || elements.latestMeasurementSelect
+    );
+    if (shouldInitTrend) {
+        initTrendSection();
+    }
 })();
