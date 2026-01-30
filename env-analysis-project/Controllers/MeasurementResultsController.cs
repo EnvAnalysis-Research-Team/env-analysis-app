@@ -20,15 +20,18 @@ namespace env_analysis_project.Controllers
         private readonly env_analysis_projectContext _context;
         private readonly IUserActivityLogger _activityLogger;
         private readonly IMeasurementImportService _measurementImportService;
+        private readonly IPredictionService _predictionService;
 
         public MeasurementResultsController(
             env_analysis_projectContext context,
             IUserActivityLogger activityLogger,
-            IMeasurementImportService measurementImportService)
+            IMeasurementImportService measurementImportService,
+            IPredictionService predictionService)
         {
             _context = context;
             _activityLogger = activityLogger;
             _measurementImportService = measurementImportService;
+            _predictionService = predictionService;
         }
 
         public async Task<IActionResult> Manage()
@@ -619,6 +622,231 @@ namespace env_analysis_project.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> ParameterTrendPredictions(
+            [FromQuery] string? code,
+            [FromQuery(Name = "codes")] string[]? codes,
+            [FromQuery] string? startMonth,
+            [FromQuery] string? endMonth,
+            [FromQuery] int? sourceId = null)
+        {
+            var normalizedCodes = new List<string>();
+            if (codes != null)
+            {
+                foreach (var entry in codes)
+                {
+                    if (!string.IsNullOrWhiteSpace(entry))
+                    {
+                        normalizedCodes.Add(entry.Trim().ToUpperInvariant());
+                    }
+                }
+            }
+
+            if (normalizedCodes.Count == 0)
+            {
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("Parameter code is required."));
+                }
+                normalizedCodes.Add(code.Trim().ToUpperInvariant());
+            }
+
+            normalizedCodes = normalizedCodes.Distinct().ToList();
+            var isMultiParameterRequest = normalizedCodes.Count > 1;
+
+            const int MaxMonths = 36;
+            var now = DateTime.UtcNow;
+            var defaultEnd = new DateTime(now.Year, now.Month, 1);
+            var defaultStart = defaultEnd.AddMonths(-11);
+
+            DateTime? parsedStart = null;
+            DateTime? parsedEnd = null;
+
+            if (!string.IsNullOrWhiteSpace(startMonth))
+            {
+                if (!TryParseMonth(startMonth, out var tmpStart))
+                {
+                    return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("Invalid start month format. Use yyyy-MM."));
+                }
+                parsedStart = tmpStart;
+            }
+
+            if (!string.IsNullOrWhiteSpace(endMonth))
+            {
+                if (!TryParseMonth(endMonth, out var tmpEnd))
+                {
+                    return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("Invalid end month format. Use yyyy-MM."));
+                }
+                parsedEnd = tmpEnd;
+            }
+
+            var rangeStart = new DateTime((parsedStart ?? parsedEnd ?? defaultStart).Year, (parsedStart ?? parsedEnd ?? defaultStart).Month, 1);
+            var rangeEnd = new DateTime((parsedEnd ?? parsedStart ?? defaultEnd).Year, (parsedEnd ?? parsedStart ?? defaultEnd).Month, 1);
+
+            if (rangeEnd < rangeStart)
+            {
+                return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("End month must be greater than or equal to start month."));
+            }
+
+            var months = new List<DateTime>();
+            var cursor = rangeStart;
+            while (cursor <= rangeEnd && months.Count < MaxMonths)
+            {
+                months.Add(cursor);
+                cursor = cursor.AddMonths(1);
+            }
+
+            if (months.Count == 0)
+            {
+                months.Add(rangeStart);
+            }
+
+            var effectiveStart = months.First();
+            var effectiveEndExclusive = months.Last().AddMonths(1);
+
+            var metadataEntries = await _context.Parameter
+                .Where(p => normalizedCodes.Contains(p.ParameterCode.ToUpper()) && !p.IsDeleted)
+                .Select(p => new ParameterLookup
+                {
+                    Code = p.ParameterCode,
+                    Label = p.ParameterName,
+                    Unit = p.Unit,
+                    StandardValue = p.StandardValue,
+                    Type = ParameterTypeHelper.Normalize(p.Type)
+                })
+                .ToListAsync();
+
+            if (metadataEntries.Count != normalizedCodes.Count)
+            {
+                return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("One or more parameters were not found."));
+            }
+
+            if (isMultiParameterRequest && metadataEntries.Any(entry => entry.Type != "water"))
+            {
+                return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("Multi-parameter trends are only available for water parameters."));
+            }
+
+            var metadataLookup = metadataEntries
+                .ToDictionary(entry => entry.Code.ToUpperInvariant(), entry => entry);
+
+            var normalizedCodeSet = normalizedCodes.ToHashSet();
+
+            var measurementQuery = _context.MeasurementResult
+                .AsNoTracking()
+                .Include(m => m.EmissionSource)
+                .Include(m => m.Parameter)
+                .Where(m => m.IsApproved &&
+                            m.ParameterCode != null &&
+                            normalizedCodeSet.Contains(m.ParameterCode.ToUpper()) &&
+                            m.Value.HasValue);
+
+            if (sourceId.HasValue)
+            {
+                measurementQuery = measurementQuery.Where(m => m.EmissionSourceID == sourceId.Value);
+            }
+
+            var measurements = await measurementQuery
+                .Select(m => new
+                {
+                    CodeUpper = m.ParameterCode.ToUpper(),
+                    Date = m.MeasurementDate == default ? m.EntryDate : m.MeasurementDate,
+                    m.Value,
+                    ParameterName = m.Parameter != null ? m.Parameter.ParameterName : m.ParameterCode
+                })
+                .Where(x => x.Date >= effectiveStart && x.Date < effectiveEndExclusive)
+                .OrderBy(x => x.Date)
+                .ToListAsync();
+
+            if (measurements.Count == 0)
+            {
+                return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("No approved measurements found for the selected range."));
+            }
+
+            var uniqueDates = measurements
+                .Select(entry => entry.Date)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToList();
+
+            if (uniqueDates.Count == 0)
+            {
+                return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("No approved measurements found for the selected range."));
+            }
+
+            var labels = uniqueDates
+                .Select(date => date.ToString("dd MMM yyyy HH:mm"))
+                .ToArray();
+
+            var modelInput = measurements.Select(entry => new PollutionData
+            {
+                Parameter = entry.CodeUpper,
+                Value = entry.Value.HasValue ? (float)entry.Value.Value : 0f,
+                MeasurementDate = entry.Date.ToString("yyyy-MM-ddTHH:mm:ss")
+            }).ToList();
+
+            var predictionResult = _predictionService.PredictFromData(modelInput);
+            if (predictionResult.Rows.Count == 0)
+            {
+                return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("Not enough data to run the prediction model."));
+            }
+
+            var predictionLookup = predictionResult.Rows
+                .GroupBy(row => row.ParameterDisplayName?.ToUpperInvariant() ?? string.Empty)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .GroupBy(row => row.MeasurementDate)
+                        .ToDictionary(
+                            entry => entry.Key,
+                            entry => entry.Average(item => (double)item.PredictedValue)));
+
+            var series = normalizedCodes.Select(codeEntry =>
+            {
+                var meta = metadataLookup[codeEntry];
+                var datePredictions = predictionLookup.TryGetValue(codeEntry, out var byDate)
+                    ? byDate
+                    : new Dictionary<DateTime, double>();
+
+                var points = uniqueDates.Select(date => new ParameterTrendPoint
+                {
+                    Month = date.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    Label = date.ToString("dd MMM yyyy HH:mm"),
+                    Value = datePredictions.TryGetValue(date, out var value) ? value : null,
+                    ParameterName = meta.Label,
+                    Unit = meta.Unit
+                }).ToList();
+
+                return new ParameterTrendSeries
+                {
+                    ParameterCode = meta.Code,
+                    ParameterName = meta.Label,
+                    Unit = meta.Unit,
+                    Points = points,
+                    IsForecast = true
+                };
+            }).ToList();
+
+            var response = new ParameterTrendResponse
+            {
+                Labels = labels,
+                Series = series,
+                Table = new TrendTablePage
+                {
+                    Items = Array.Empty<ParameterTrendPoint>(),
+                    Pagination = new PaginationMetadata
+                    {
+                        Page = 1,
+                        PageSize = 0,
+                        TotalItems = 0,
+                        TotalPages = 1
+                    }
+                },
+                StandardValue = null
+            };
+
+            return Ok(ApiResponse.Success(response));
+        }
+
+        [HttpGet]
         public async Task<IActionResult> DetailData(int id)
         {
             var measurement = await _context.MeasurementResult
@@ -1067,6 +1295,7 @@ namespace env_analysis_project.Controllers
             public string ParameterName { get; init; } = string.Empty;
             public string? Unit { get; init; }
             public IReadOnlyList<ParameterTrendPoint> Points { get; init; } = Array.Empty<ParameterTrendPoint>();
+            public bool IsForecast { get; init; }
         }
 
         private sealed class ParameterTrendPoint

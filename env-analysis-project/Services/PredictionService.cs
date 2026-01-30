@@ -24,9 +24,6 @@ namespace env_analysis_project.Services
     {
         private readonly MLContext _mlContext;
         private readonly ThresholdOptions _thresholds;
-        double totalR2 = 0;
-        double totalRMSE = 0;
-        int processedParams = 0;
 
         public PredictionService(IOptions<ThresholdOptions> options)
         {
@@ -41,14 +38,20 @@ namespace env_analysis_project.Services
         };
         public PredictionResult UploadAndPredict(string filePath)
         {
-            var result = new PredictionResult();
-
-            
             IDataView fullDataView = _mlContext.Data.LoadFromTextFile<PollutionData>(
                 path: filePath, hasHeader: true, separatorChar: ',', allowQuoting: true);
 
             var rawList = _mlContext.Data
                 .CreateEnumerable<PollutionData>(fullDataView, reuseRowObject: false)
+                .ToList();
+
+            return PredictFromData(rawList);
+        }
+
+        public PredictionResult PredictFromData(IEnumerable<PollutionData> data)
+        {
+            var result = new PredictionResult();
+            var rawList = (data ?? Enumerable.Empty<PollutionData>())
                 .Where(x => x != null &&
                             !string.IsNullOrEmpty(x.Parameter) &&
                             DateTime.TryParse(x.MeasurementDate, out _))
@@ -56,6 +59,9 @@ namespace env_analysis_project.Services
                 .ToList();
 
             var parameters = rawList.Select(x => x.Parameter).Distinct().ToList();
+            var totalR2 = 0d;
+            var totalRMSE = 0d;
+            var processedParams = 0;
 
             foreach (var pName in parameters)
             {

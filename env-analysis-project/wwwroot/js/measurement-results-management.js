@@ -215,8 +215,8 @@
         activeType: 'air',
         chart: null,
         groupedChart: null,
-        showLimitLine: true,
-        lastPayload: null,
+        showLimitLine: false,
+        basePayload: null,
         filter: {
             startMonth: null,
             endMonth: null,
@@ -616,6 +616,13 @@
         elements.trendLimitToggle.classList.toggle('border-blue-300', trend.showLimitLine);
     };
 
+    const getTrendSelection = () => ({
+        activeType: trend.activeType,
+        selectedCode: trend.selectedCode,
+        selectedCodes: Array.isArray(trend.selectedCodes) ? [...trend.selectedCodes] : [],
+        filter: { ...trend.filter }
+    });
+
     const getGroupedMode = () => {
         const type = normalizeParameterType(trend.activeType);
         if (type === 'air') {
@@ -659,12 +666,14 @@
         }
 
         const dataSeries = series.map((item, index) => {
-            const baseColor = trendColorPalette[index % trendColorPalette.length];
+            const isForecast = Boolean(item?.isForecast);
+            const baseColor = isForecast ? '#f59e0b' : trendColorPalette[index % trendColorPalette.length];
             const datasetLabelBase = item.parameterName || item.parameterCode || `Series ${index + 1}`;
-            const datasetLabel = item.unit ? `${datasetLabelBase} (${item.unit})` : datasetLabelBase;
+            const labelCore = item.unit ? `${datasetLabelBase} (${item.unit})` : datasetLabelBase;
+            const datasetLabel = isForecast ? `${labelCore} - Model` : labelCore;
             const points = Array.isArray(item.points) ? item.points : [];
             const data = points.map(point => toNumericOrNull(point?.value));
-            return { name: datasetLabel, data, color: baseColor };
+            return { name: datasetLabel, data, color: baseColor, isForecast };
         }).filter(seriesItem => seriesItem.data.length > 0);
 
         if (!dataSeries.length) {
@@ -698,8 +707,8 @@
             dataLabels: { enabled: false },
             stroke: {
                 curve: 'straight',
-                width: dataSeries.map(seriesItem => seriesItem.isLimit ? 2 : 3),
-                dashArray: dataSeries.map(seriesItem => seriesItem.isLimit ? 6 : 0)
+                width: dataSeries.map(seriesItem => seriesItem.isForecast ? 2 : 3),
+                dashArray: dataSeries.map(seriesItem => seriesItem.isForecast ? 6 : 0)
             },
             grid: {
                 row: {
@@ -814,10 +823,11 @@
                 const count = counts[idx] || 0;
                 return count > 0 ? value / count : null;
             });
+            const isModelSeries = typeof name === 'string' && name.toLowerCase().includes('model');
             return {
                 name,
                 data: averaged,
-                color: trendColorPalette[index % trendColorPalette.length]
+                color: isModelSeries ? '#f59e0b' : trendColorPalette[index % trendColorPalette.length]
             };
         }).filter(seriesItem => seriesItem.data.some(value => value != null));
 
@@ -982,6 +992,35 @@
         return `${routes.trend}?${params.toString()}`;
     };
 
+    const buildOverlayPayload = (modelPayload, modelTableItems) => {
+        if (!trend.basePayload) return null;
+        const baseSeries = Array.isArray(trend.basePayload.series) ? trend.basePayload.series : [];
+        const overlaySeries = Array.isArray(modelPayload?.series) ? modelPayload.series : [];
+        const baseItems = Array.isArray(trend.basePayload?.table?.items) ? trend.basePayload.table.items : [];
+        const overlayItems = Array.isArray(modelTableItems) ? modelTableItems : [];
+        return {
+            ...trend.basePayload,
+            series: [...baseSeries, ...overlaySeries],
+            table: {
+                ...trend.basePayload.table,
+                items: [...baseItems, ...overlayItems]
+            }
+        };
+    };
+
+    const renderWithModelOverlay = (modelPayload, modelTableItems) => {
+        const combined = buildOverlayPayload(modelPayload, modelTableItems);
+        if (!combined) return;
+        renderTrendChart(combined);
+        renderGroupedBarChart(combined);
+    };
+
+    const clearModelOverlay = () => {
+        if (!trend.basePayload) return;
+        renderTrendChart(trend.basePayload);
+        renderGroupedBarChart(trend.basePayload);
+    };
+
     const loadParameterTrends = async () => {
         if (!elements.trendTableBody || !routes.trend) return;
         const url = buildTrendUrl();
@@ -989,8 +1028,11 @@
             renderTrendTable(null);
             clearTrendChart();
             clearGroupedBarChart();
-            trend.lastPayload = null;
+            trend.basePayload = null;
             trend.table.allItems = [];
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('trend:payload', { detail: { payload: null, selection: getTrendSelection() } }));
+            }
             return;
         }
 
@@ -1006,7 +1048,7 @@
             const json = await res.json();
             if (json?.success === false) throw new Error(json?.message || 'Failed to load trend data.');
             const payload = unwrapApiResponse(json);
-            trend.lastPayload = payload;
+            trend.basePayload = payload;
             trend.table.allItems = Array.isArray(payload?.table?.items) ? payload.table.items : [];
             renderTrendChart(payload);
             renderGroupedBarChart(payload);
@@ -1014,10 +1056,17 @@
                 items: trend.table.allItems,
                 unit: payload?.table?.unit
             });
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('trend:payload', { detail: { payload, selection: getTrendSelection() } }));
+            }
         } catch (error) {
             console.error(error);
             clearTrendChart();
             clearGroupedBarChart();
+            trend.basePayload = null;
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('trend:payload', { detail: { payload: null, selection: getTrendSelection() } }));
+            }
             elements.trendTableBody.innerHTML = `
                 <tr>
                     <td colspan="5" class="px-3 py-5 text-center text-red-500">${error.message || 'Failed to load trend data.'}</td>
@@ -1343,8 +1392,8 @@
         elements.trendFilterForm?.addEventListener('submit', submitTrendFilter);
         elements.trendLimitToggle?.addEventListener('click', () => {
             const nextState = !trend.showLimitLine;
-            if (nextState && trend.lastPayload) {
-                const standardValue = toNumericOrNull(trend.lastPayload.standardValue);
+            if (nextState && trend.basePayload) {
+                const standardValue = toNumericOrNull(trend.basePayload.standardValue);
                 if (standardValue == null) {
                     alert('This parameter does not have a standard value.');
                     return;
@@ -1352,9 +1401,9 @@
             }
             trend.showLimitLine = nextState;
             updateLimitToggleLabel();
-            if (trend.lastPayload) {
-                renderTrendChart(trend.lastPayload);
-                renderGroupedBarChart(trend.lastPayload);
+            if (trend.basePayload) {
+                renderTrendChart(trend.basePayload);
+                renderGroupedBarChart(trend.basePayload);
             }
         });
         elements.trendFilterReset?.addEventListener('click', () => {
@@ -1371,13 +1420,13 @@
         elements.trendTablePrev?.addEventListener('click', () => {
             if (trend.table.page <= 1) return;
             trend.table.page -= 1;
-            renderTrendTable({ items: trend.table.allItems, unit: trend.lastPayload?.table?.unit });
+            renderTrendTable({ items: trend.table.allItems, unit: trend.basePayload?.table?.unit });
         });
 
         elements.trendTableNext?.addEventListener('click', () => {
             if (trend.table.page >= (trend.table.pagination.totalPages || 1)) return;
             trend.table.page += 1;
-            renderTrendTable({ items: trend.table.allItems, unit: trend.lastPayload?.table?.unit });
+            renderTrendTable({ items: trend.table.allItems, unit: trend.basePayload?.table?.unit });
         });
 
         elements.trendTablePageSize?.addEventListener('change', (event) => {
@@ -1389,7 +1438,7 @@
             if (selected === trend.table.pageSize) return;
             trend.table.pageSize = selected;
             trend.table.page = 1;
-            renderTrendTable({ items: trend.table.allItems, unit: trend.lastPayload?.table?.unit });
+            renderTrendTable({ items: trend.table.allItems, unit: trend.basePayload?.table?.unit });
         });
 
         loadParameterTrends();
@@ -2350,5 +2399,14 @@
     );
     if (shouldInitTrend) {
         initTrendSection();
+    }
+
+    if (typeof window !== 'undefined') {
+        window.trendPredictionBridge = {
+            getBasePayload: () => trend.basePayload,
+            getTrendSelection,
+            renderWithModelOverlay,
+            clearModelOverlay
+        };
     }
 })();

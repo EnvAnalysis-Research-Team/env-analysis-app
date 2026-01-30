@@ -65,7 +65,11 @@
                         </button>
                         <button type="button" id="trendLimitToggle"
                             class="px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-300 rounded-sm hover:bg-gray-100 transition">
-                            Limit: On
+                            Limit: Off
+                        </button>
+                        <button type="button" id="trendModelToggle"
+                            class="px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-300 rounded-sm hover:bg-gray-100 transition">
+                            Model: Off
                         </button>
                     </div>
                 </form>
@@ -148,6 +152,35 @@
                 </div>
             </div>
         </div>
+
+        <div class="border-t border-gray-100 pt-4">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-xs font-semibold text-gray-700">Prediction values</p>
+                <span class="text-[11px] text-gray-500">Model output</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left table-auto">
+                    <thead class="bg-gray-100 text-gray-700">
+                        <tr>
+                            <th class="px-3 py-2">Month</th>
+                            <th class="px-3 py-2">Parameter</th>
+                            <th class="px-3 py-2">Predicted value</th>
+                            <th class="px-3 py-2">Unit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="predictionTableBody" class="divide-y divide-gray-100">
+                        <tr>
+                            <td colspan="4" class="px-3 py-5 text-center text-gray-400">
+                                Turn on Model to see prediction values.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="pt-3 border-t border-gray-100 text-[11px] text-gray-600">
+                    <div id="predictionTableSummary">No prediction data</div>
+                </div>
+            </div>
+        </div>
     </section>
 </div>
 
@@ -159,7 +192,8 @@
         };
         window.measurementResultRoutes = {
             trend: '@Url.Action("ParameterTrends", "MeasurementResults")',
-            latest: '@Url.Action("LatestMeasurementValues", "Parameters")'
+            latest: '@Url.Action("LatestMeasurementValues", "Parameters")',
+            model: '@Url.Action("ParameterTrendPredictions", "MeasurementResults")'
         };
         window.measurementResultConfig = {
             latestMode: 'list'
@@ -170,6 +204,7 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="~/js/measurement-results-management.js" asp-append-version="true"></script>
+    <script src="~/js/prediction-trends.js" asp-append-version="true"></script>
 }
 
 @section Styles {
