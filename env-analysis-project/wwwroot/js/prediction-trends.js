@@ -86,6 +86,7 @@
             const points = Array.isArray(serie?.points) ? serie.points : [];
             const baseName = serie?.parameterName || serie?.parameterCode || 'Model';
             const unit = serie?.unit || null;
+            const standardValue = serie?.standardValue ?? null;
             const parameterName = isWater ? `${baseName} (Model)` : baseName;
             const sourceName = isWater ? null : 'Model (All sources)';
 
@@ -100,7 +101,8 @@
                     value,
                     parameterName,
                     sourceName,
-                    unit
+                    unit,
+                    standardValue
                 });
             });
         });
@@ -114,7 +116,7 @@
         if (!rows.length) {
             elements.tableBody.innerHTML = `
                 <tr>
-                    <td colspan="4" class="px-3 py-5 text-center text-gray-400">
+                    <td colspan="5" class="px-3 py-5 text-center text-gray-400">
                         Turn on Model to see prediction values.
                     </td>
                 </tr>`;
@@ -138,11 +140,15 @@
             const unit = item.unit ? escapeHtml(item.unit) : '-';
             const label = escapeHtml(item.label || '-');
             const value = formatNumericValue(item.value);
+            const standard = formatNumericValue(item.standardValue);
+            const highlight = item.standardValue != null && Number(item.value) > Number(item.standardValue);
+            const rowClass = highlight ? 'bg-red-200' : '';
             return `
-                <tr class="hover:bg-gray-50 transition">
+                <tr class="hover:bg-gray-50 transition ${rowClass}">
                     <td class="px-3 py-2">${label}</td>
                     <td class="px-3 py-2">${name}</td>
                     <td class="px-3 py-2">${value}</td>
+                    <td class="px-3 py-2">${standard}</td>
                     <td class="px-3 py-2">${unit}</td>
                 </tr>`;
         }).join('');

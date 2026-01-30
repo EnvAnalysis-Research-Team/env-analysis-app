@@ -520,6 +520,7 @@ namespace env_analysis_project.Controllers
                         ParameterCode = meta.Code,
                         ParameterName = meta.Label,
                         Unit = meta.Unit,
+                        StandardValue = meta.StandardValue,
                         Points = seriesPoints
                     };
                 }).ToArray();
@@ -577,6 +578,7 @@ namespace env_analysis_project.Controllers
                         ParameterCode = metadata.Code,
                         ParameterName = group.Key,
                         Unit = metadata.Unit,
+                        StandardValue = metadata.StandardValue,
                         Points = seriesPoints
                     };
                 }).ToArray();
@@ -820,6 +822,7 @@ namespace env_analysis_project.Controllers
                     ParameterCode = meta.Code,
                     ParameterName = meta.Label,
                     Unit = meta.Unit,
+                    StandardValue = meta.StandardValue,
                     Points = points,
                     IsForecast = true
                 };
@@ -1294,6 +1297,7 @@ namespace env_analysis_project.Controllers
             public string ParameterCode { get; init; } = string.Empty;
             public string ParameterName { get; init; } = string.Empty;
             public string? Unit { get; init; }
+            public double? StandardValue { get; init; }
             public IReadOnlyList<ParameterTrendPoint> Points { get; init; } = Array.Empty<ParameterTrendPoint>();
             public bool IsForecast { get; init; }
         }
