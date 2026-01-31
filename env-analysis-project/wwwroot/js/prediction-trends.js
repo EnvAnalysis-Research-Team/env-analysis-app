@@ -83,6 +83,10 @@
         const items = [];
 
         series.forEach((serie) => {
+            const forecastKind = (serie?.forecastKind || '').toString().trim().toLowerCase();
+            if (forecastKind === 'historical') {
+                return;
+            }
             const points = Array.isArray(serie?.points) ? serie.points : [];
             const baseName = serie?.parameterName || serie?.parameterCode || 'Model';
             const unit = serie?.unit || null;
@@ -189,7 +193,7 @@
                 ...payload,
                 series: series.map(item => ({
                     ...item,
-                    isForecast: true
+                    isForecast: item?.isForecast ?? true
                 }))
             };
 

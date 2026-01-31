@@ -774,10 +774,6 @@ namespace env_analysis_project.Controllers
                 return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("No approved measurements found for the selected range."));
             }
 
-            var labels = uniqueDates
-                .Select(date => date.ToString("dd MMM yyyy HH:mm"))
-                .ToArray();
-
             var modelInput = measurements.Select(entry => new PollutionData
             {
                 Parameter = entry.CodeUpper,
@@ -786,12 +782,12 @@ namespace env_analysis_project.Controllers
             }).ToList();
 
             var predictionResult = _predictionService.PredictFromData(modelInput);
-            if (predictionResult.Rows.Count == 0)
+            if (predictionResult.Rows.Count == 0 && predictionResult.FutureForecasts.Count == 0)
             {
                 return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("Not enough data to run the prediction model."));
             }
 
-            var predictionLookup = predictionResult.Rows
+            var historicalPredictionLookup = predictionResult.Rows
                 .GroupBy(row => row.ParameterDisplayName?.ToUpperInvariant() ?? string.Empty)
                 .ToDictionary(
                     group => group.Key,
@@ -801,32 +797,103 @@ namespace env_analysis_project.Controllers
                             entry => entry.Key,
                             entry => entry.Average(item => (double)item.PredictedValue)));
 
-            var series = normalizedCodes.Select(codeEntry =>
+            var forecastDates = predictionResult.FutureForecasts
+                .SelectMany(entry => entry.Value ?? new List<FutureForecast>())
+                .Select(entry => entry.Date)
+                .Distinct()
+                .OrderBy(date => date)
+                .ToList();
+
+            var historicalDates = uniqueDates;
+
+            if (historicalDates.Count == 0 && forecastDates.Count == 0)
+            {
+                return BadRequest(ApiResponse.Fail<ParameterTrendResponse>("No forecast data available for the selected range."));
+            }
+
+            var combinedTimeline = new List<(DateTime Date, string Label, string Kind)>();
+            foreach (var date in historicalDates)
+            {
+                combinedTimeline.Add((date, date.ToString("dd MMM yyyy HH:mm"), "historical"));
+            }
+            foreach (var date in forecastDates)
+            {
+                combinedTimeline.Add((date, date.ToString("MMM yyyy"), "future"));
+            }
+
+            var combinedLabels = combinedTimeline
+                .OrderBy(entry => entry.Date)
+                .GroupBy(entry => new { entry.Date, entry.Label })
+                .Select(group => group.First())
+                .ToList();
+
+            var labels = combinedLabels.Select(entry => entry.Label).ToArray();
+
+            var series = new List<ParameterTrendSeries>();
+            foreach (var codeEntry in normalizedCodes)
             {
                 var meta = metadataLookup[codeEntry];
-                var datePredictions = predictionLookup.TryGetValue(codeEntry, out var byDate)
+                var datePredictions = historicalPredictionLookup.TryGetValue(codeEntry, out var byDate)
                     ? byDate
                     : new Dictionary<DateTime, double>();
 
-                var points = uniqueDates.Select(date => new ParameterTrendPoint
-                {
-                    Month = date.ToString("yyyy-MM-ddTHH:mm:ss"),
-                    Label = date.ToString("dd MMM yyyy HH:mm"),
-                    Value = datePredictions.TryGetValue(date, out var value) ? value : null,
-                    ParameterName = meta.Label,
-                    Unit = meta.Unit
-                }).ToList();
+                var historicalLookupByLabel = datePredictions
+                    .ToDictionary(entry => entry.Key.ToString("dd MMM yyyy HH:mm"), entry => entry.Value);
 
-                return new ParameterTrendSeries
+                if (historicalLookupByLabel.Count > 0)
                 {
-                    ParameterCode = meta.Code,
-                    ParameterName = meta.Label,
-                    Unit = meta.Unit,
-                    StandardValue = meta.StandardValue,
-                    Points = points,
-                    IsForecast = true
-                };
-            }).ToList();
+                    var points = combinedLabels.Select(entry => new ParameterTrendPoint
+                    {
+                        Month = entry.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
+                        Label = entry.Label,
+                        Value = historicalLookupByLabel.TryGetValue(entry.Label, out var value) ? value : null,
+                        ParameterName = meta.Label,
+                        Unit = meta.Unit
+                    }).ToList();
+
+                    series.Add(new ParameterTrendSeries
+                    {
+                        ParameterCode = meta.Code,
+                        ParameterName = meta.Label,
+                        Unit = meta.Unit,
+                        StandardValue = meta.StandardValue,
+                        Points = points,
+                        IsForecast = true,
+                        ForecastKind = "historical"
+                    });
+                }
+
+                var forecasts = predictionResult.FutureForecasts.TryGetValue(codeEntry, out var list)
+                    ? list
+                    : new List<FutureForecast>();
+
+                var forecastLookupByLabel = forecasts
+                    .GroupBy(item => item.Date)
+                    .ToDictionary(group => group.Key.ToString("MMM yyyy"), group => group.Average(item => (double)item.Value));
+
+                if (forecastLookupByLabel.Count > 0)
+                {
+                    var points = combinedLabels.Select(entry => new ParameterTrendPoint
+                    {
+                        Month = entry.Date.ToString("yyyy-MM-ddTHH:mm:ss"),
+                        Label = entry.Label,
+                        Value = forecastLookupByLabel.TryGetValue(entry.Label, out var value) ? value : null,
+                        ParameterName = meta.Label,
+                        Unit = meta.Unit
+                    }).ToList();
+
+                    series.Add(new ParameterTrendSeries
+                    {
+                        ParameterCode = meta.Code,
+                        ParameterName = meta.Label,
+                        Unit = meta.Unit,
+                        StandardValue = meta.StandardValue,
+                        Points = points,
+                        IsForecast = true,
+                        ForecastKind = "future"
+                    });
+                }
+            }
 
             var response = new ParameterTrendResponse
             {
@@ -1300,6 +1367,7 @@ namespace env_analysis_project.Controllers
             public double? StandardValue { get; init; }
             public IReadOnlyList<ParameterTrendPoint> Points { get; init; } = Array.Empty<ParameterTrendPoint>();
             public bool IsForecast { get; init; }
+            public string? ForecastKind { get; init; }
         }
 
         private sealed class ParameterTrendPoint

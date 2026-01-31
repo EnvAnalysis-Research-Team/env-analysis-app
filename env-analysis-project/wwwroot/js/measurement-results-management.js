@@ -665,7 +665,44 @@
             return;
         }
 
-        const dataSeries = series.map((item, index) => {
+        const mergeForecastSeries = (items) => {
+            const merged = [];
+            const lookup = new Map();
+            items.forEach(item => {
+                const isForecast = Boolean(item?.isForecast);
+                if (!isForecast) {
+                    merged.push(item);
+                    return;
+                }
+                const key = [
+                    item.parameterCode || '',
+                    item.parameterName || '',
+                    item.unit || '',
+                    item.standardValue ?? ''
+                ].join('|');
+                if (!lookup.has(key)) {
+                    lookup.set(key, { ...item });
+                    merged.push(lookup.get(key));
+                    return;
+                }
+                const existing = lookup.get(key);
+                const existingPoints = Array.isArray(existing.points) ? existing.points : [];
+                const nextPoints = Array.isArray(item.points) ? item.points : [];
+                const mergedPoints = existingPoints.map((point, idx) => {
+                    const nextPoint = nextPoints[idx];
+                    const nextValue = nextPoint?.value;
+                    if (nextValue != null) {
+                        return { ...point, value: nextValue };
+                    }
+                    return point;
+                });
+                existing.points = mergedPoints;
+            });
+            return merged;
+        };
+
+        const mergedSeries = mergeForecastSeries(Array.isArray(series) ? series : []);
+        const dataSeries = mergedSeries.map((item, index) => {
             const isForecast = Boolean(item?.isForecast);
             const baseColor = isForecast ? '#f59e0b' : trendColorPalette[index % trendColorPalette.length];
             const datasetLabelBase = item.parameterName || item.parameterCode || `Series ${index + 1}`;
@@ -953,21 +990,26 @@
         }
 
         const unit = tablePayload.unit ?? '-';
+        const standardValue = tablePayload.standardValue ?? null;
         const pageSize = trend.table.pageSize;
         const totalPages = Math.max(1, Math.ceil(items.length / Math.max(pageSize, 1)));
         const currentPage = Math.min(Math.max(trend.table.page, 1), totalPages);
         trend.table.page = currentPage;
         const pageItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-        const rows = pageItems.map(point => `
-            <tr class="hover:bg-gray-50 transition">
-                <td class="px-3 py-2 whitespace-nowrap">${point.label}</td>
-                <td class="px-3 py-2">${point.parameterName ?? '-'}</td>
-                <td class="px-3 py-2 truncate" title="${point.sourceName ?? ''}">${point.sourceName ?? '-'}</td>
-                <td class="px-3 py-2">${formatNumericValue(point.value)}</td>
-                <td class="px-3 py-2">${point.unit ?? unit}</td>
-            </tr>
-        `);
+        const rows = pageItems.map(point => {
+            const highlight = standardValue != null && Number(point.value) > Number(standardValue);
+            const rowClass = highlight ? 'bg-red-200' : '';
+            return `
+                <tr class="hover:bg-gray-50 transition ${rowClass}">
+                    <td class="px-3 py-2 whitespace-nowrap">${point.label}</td>
+                    <td class="px-3 py-2">${point.parameterName ?? '-'}</td>
+                    <td class="px-3 py-2 truncate" title="${point.sourceName ?? ''}">${point.sourceName ?? '-'}</td>
+                    <td class="px-3 py-2">${formatNumericValue(point.value)}</td>
+                    <td class="px-3 py-2">${point.unit ?? unit}</td>
+                </tr>
+            `;
+        });
 
         elements.trendTableBody.innerHTML = rows.join('') || emptyRow;
         updateTrendTableControls({ items });
@@ -998,8 +1040,12 @@
         const overlaySeries = Array.isArray(modelPayload?.series) ? modelPayload.series : [];
         const baseItems = Array.isArray(trend.basePayload?.table?.items) ? trend.basePayload.table.items : [];
         const overlayItems = Array.isArray(modelTableItems) ? modelTableItems : [];
+        const baseLabels = Array.isArray(trend.basePayload?.labels) ? trend.basePayload.labels : [];
+        const overlayLabels = Array.isArray(modelPayload?.labels) ? modelPayload.labels : [];
+        const labels = overlayLabels.length > 0 ? overlayLabels : baseLabels;
         return {
             ...trend.basePayload,
+            labels,
             series: [...baseSeries, ...overlaySeries],
             table: {
                 ...trend.basePayload.table,
@@ -1052,10 +1098,11 @@
             trend.table.allItems = Array.isArray(payload?.table?.items) ? payload.table.items : [];
             renderTrendChart(payload);
             renderGroupedBarChart(payload);
-            renderTrendTable({
-                items: trend.table.allItems,
-                unit: payload?.table?.unit
-            });
+              renderTrendTable({
+                  items: trend.table.allItems,
+                  unit: payload?.table?.unit,
+                  standardValue: payload?.standardValue ?? null
+              });
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('trend:payload', { detail: { payload, selection: getTrendSelection() } }));
             }
@@ -1420,13 +1467,21 @@
         elements.trendTablePrev?.addEventListener('click', () => {
             if (trend.table.page <= 1) return;
             trend.table.page -= 1;
-            renderTrendTable({ items: trend.table.allItems, unit: trend.basePayload?.table?.unit });
+            renderTrendTable({
+                items: trend.table.allItems,
+                unit: trend.basePayload?.table?.unit,
+                standardValue: trend.basePayload?.standardValue ?? null
+            });
         });
 
         elements.trendTableNext?.addEventListener('click', () => {
             if (trend.table.page >= (trend.table.pagination.totalPages || 1)) return;
             trend.table.page += 1;
-            renderTrendTable({ items: trend.table.allItems, unit: trend.basePayload?.table?.unit });
+            renderTrendTable({
+                items: trend.table.allItems,
+                unit: trend.basePayload?.table?.unit,
+                standardValue: trend.basePayload?.standardValue ?? null
+            });
         });
 
         elements.trendTablePageSize?.addEventListener('change', (event) => {
@@ -1438,7 +1493,11 @@
             if (selected === trend.table.pageSize) return;
             trend.table.pageSize = selected;
             trend.table.page = 1;
-            renderTrendTable({ items: trend.table.allItems, unit: trend.basePayload?.table?.unit });
+            renderTrendTable({
+                items: trend.table.allItems,
+                unit: trend.basePayload?.table?.unit,
+                standardValue: trend.basePayload?.standardValue ?? null
+            });
         });
 
         loadParameterTrends();
