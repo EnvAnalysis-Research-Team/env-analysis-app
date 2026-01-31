@@ -995,7 +995,15 @@
         const totalPages = Math.max(1, Math.ceil(items.length / Math.max(pageSize, 1)));
         const currentPage = Math.min(Math.max(trend.table.page, 1), totalPages);
         trend.table.page = currentPage;
-        const pageItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+        const sortedItems = items.slice().sort((a, b) => {
+            const dateA = Date.parse(a?.month ?? '');
+            const dateB = Date.parse(b?.month ?? '');
+            if (Number.isFinite(dateA) && Number.isFinite(dateB) && dateA !== dateB) {
+                return dateB - dateA;
+            }
+            return (b?.label ?? '').localeCompare(a?.label ?? '');
+        });
+        const pageItems = sortedItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
         const rows = pageItems.map(point => {
             const highlight = standardValue != null && Number(point.value) > Number(standardValue);
@@ -1012,7 +1020,7 @@
         });
 
         elements.trendTableBody.innerHTML = rows.join('') || emptyRow;
-        updateTrendTableControls({ items });
+        updateTrendTableControls({ items: sortedItems });
     };
 
     const buildTrendUrl = () => {
